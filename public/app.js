@@ -50,7 +50,25 @@ function saveProfile(){
     speak:userProfile.speak
   }));
   updateProfileUI();
+  scheduleRemoteProfileSave();
 }
+let profileTimer,profileReady=false;
+function profileKey(){return ($('profileId')?.value||'').trim()}
+function scheduleRemoteProfileSave(){
+  if(!profileReady)return;
+  clearTimeout(profileTimer);
+  profileTimer=setTimeout(async()=>{
+    if(!/^[a-zA-Z0-9_-]{3,45}$/.test(profileKey()))return;
+    try{await fetch('/api/profiles',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id:profileKey(),profile:{...userProfile,persona:$('persona').value}})});$('profileState').textContent='Preferencias guardadas en servidor'}catch{$('profileState').textContent='Preferencias locales; servidor no disponible'}
+  },700);
+}
+async function loadRemoteProfile(){
+  if(!/^[a-zA-Z0-9_-]{3,45}$/.test(profileKey())){$('profileState').textContent='Usa 3–45 letras, números, guiones o _';return}
+  try{const r=await fetch('/api/profiles?id='+encodeURIComponent(profileKey()));const data=await r.json();if(!r.ok)throw Error();profileReady=true;if(data.profile){userProfile={...userProfile,...data.profile};$('language').value=userProfile.language||'es';$('contrast').checked=!!userProfile.contrast;$('large').checked=!!userProfile.large;$('speak').checked=!!userProfile.speak;$('persona').value=data.profile.persona||'calida';saveProfile();$('profileState').textContent='Perfil recuperado'}else{saveProfile();$('profileState').textContent='Perfil nuevo creado'}}catch{$('profileState').textContent='No se pudo cargar el perfil'}
+}
+$('loadProfile').onclick=loadRemoteProfile;
+$('profileId').addEventListener('input',()=>{profileReady=false;$('profileState').textContent='Pulsa Cargar perfil'});
+$('persona').addEventListener('change',saveProfile);
 
 function updateProfileUI(){
   const rEl=$('profRhythm'),eEl=$('profErrors'),aEl=$('profAdaptation');
@@ -131,8 +149,9 @@ function show(n){
   if(n===3)renderQuestion();
   if(n===4)renderReview();
 }
-function patientTab(active){$('patient').hidden=!active;$('doctor').hidden=active;$('patientTab').classList.toggle('active',active);$('doctorTab').classList.toggle('active',!active);if(!active)loadRooms();}
-$('patientTab').onclick=()=>patientTab(true);$('doctorTab').onclick=()=>patientTab(false);
+function showTab(which){for(const id of ['patient','doctor']){$(id).hidden=id!==which;$(id+'Tab').classList.toggle('active',id===which)}if(which==='doctor')loadRooms()}
+function patientTab(active){showTab(active?'patient':'doctor')}
+$('patientTab').onclick=()=>showTab('patient');$('doctorTab').onclick=()=>showTab('doctor');
 zones.forEach(z=>{const b=document.createElement('button');b.type='button';b.textContent=z;b.onclick=()=>{$('region').value=z;session.region=z;paintZone();msg('Seleccionaste '+z)};$('zones').append(b)});
 function paintZone(){
 const region=$('region').value.trim();
@@ -299,9 +318,9 @@ $('send').onclick=async()=>{
     alert('No fue posible enviar. Se conserva el borrador ficticio en este navegador; no se marcará como recibido.');
   }finally{button.disabled=false}
 };
-async function refresh(){if(!sent)return;try{sent=await api('/api/cases/by-code?code='+encodeURIComponent(sent.code));$('receipt').textContent=sent.status==='recibido'?'Estado verificado: recibido. El rol médico simulado confirmó la recepción del caso.':'Estado: enviado, pendiente de acuse del rol médico simulado.';$('doctorResponse').replaceChildren();for(const r of sent.replies){const p=document.createElement('p');p.className='confirm';p.textContent=r.author+': '+r.message;$('doctorResponse').append(p)}}catch(e){$('receipt').textContent='No es posible comprobar recepción: '+e.message}}
+async function refresh(){if(!sent)return;try{sent=await api('/api/cases/by-code?code='+encodeURIComponent(sent.code));$('receipt').textContent=sent.status==='recibido'?'🟢 Estado verificado: El médico remoto se ha unido a la sala y confirmó la recepción.':'🟡 Estado: Sala enviada, pendiente de acuse del médico remoto.';$('doctorResponse').replaceChildren();for(const r of sent.replies){const p=document.createElement('p');p.className='confirm';p.textContent=r.author+': '+r.message;$('doctorResponse').append(p)}}catch(e){$('receipt').textContent='No es posible comprobar recepción: '+e.message}}
 $('refresh').onclick=refresh;$('restart').onclick=()=>{localStorage.removeItem('triagevoz_ultimo_caso_demo');session={alias:'Paciente de prueba',region:'',answers:{motivo:'',inicio:'',intensidad:'',adicionales:''},summary:'',priority:''};sent=null;$('region').value='';$('doctorResponse').replaceChildren();$('result').hidden=true;show(0)};
-let doctorCase=null;function docRender(c){if(doctorCase&&doctorCase.code!==c.code)$('message').value='';doctorCase=c;$('caseView').hidden=false;$('caseTitle').textContent='Caso SALA-'+c.code+' · '+c.alias;details($('caseDetails'),[['Zona',c.region],['Relato',c.answers.motivo],['Inicio',c.answers.inicio],['Intensidad',c.answers.intensidad],['Adicionales',c.answers.adicionales],['Resumen generado',c.summary]]);$('caseState').textContent='Estado confirmado por servidor: '+c.status;$('ack').disabled=c.status==='recibido';$('replyState').textContent='Respuestas registradas: '+c.replies.length;
+let doctorCase=null;function docRender(c){if(doctorCase&&doctorCase.code!==c.code)$('message').value='';doctorCase=c;window.currentDoctorCase=c;$('caseView').hidden=false;$('caseTitle').textContent='Caso SALA-'+c.code+' · '+c.alias;details($('caseDetails'),[['Zona',c.region],['Relato',c.answers.motivo],['Inicio',c.answers.inicio],['Intensidad',c.answers.intensidad],['Adicionales',c.answers.adicionales],['Resumen generado',c.summary]]);$('caseState').textContent='Estado confirmado por servidor: '+c.status;$('ack').disabled=c.status==='recibido';$('replyState').textContent='Respuestas registradas: '+c.replies.length;
 const history=$('replyHistory');
 history.replaceChildren();
 for(const response of c.replies){
@@ -396,3 +415,23 @@ try{
  }).catch(()=>localStorage.removeItem('triagevoz_ultimo_caso_demo'));
 }catch{}
 if('serviceWorker'in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}
+// El motor conversacional único puede completar el formulario PC2 sin abrir otra página.
+window.triageVozApply=(slots,selectedRegion='')=>{
+  if(!slots||typeof slots!=='object')return;
+  for(const key of keys)if(typeof slots[key]==='string')session.answers[key]=slots[key].slice(0,700);
+  session.alias=$('alias').value.trim().slice(0,35)||'Paciente de prueba';
+  const motivo=(slots.motivo||'').toLowerCase();
+  let zone='';
+  if(/cabeza|uma/.test(motivo))zone='Cabeza';
+  else if(/pecho|torax|tórax/.test(motivo))zone='Tórax';
+  else if(/abdomen|vientre|barriga/.test(motivo))zone='Abdomen';
+  else if(/espalda/.test(motivo))zone='Espalda alta';
+  zone=selectedRegion||zone;
+  if(zone){$('region').value=zone;session.region=zone;paintZone()}
+  show(1);
+  $('zoneHint').textContent=zone?'Zona sugerida: '+zone+'. Confírmala o corrígela.':'Selecciona la zona corporal y confirma para continuar.';
+};
+import './vui.js';
+import './navigation.js';
+// Actualización colaborativa entre dos navegadores/sesiones de demostración.
+setInterval(()=>{if(!$('doctor').hidden)loadRooms();if(sent&&!$('patient').hidden)refresh()},6000);

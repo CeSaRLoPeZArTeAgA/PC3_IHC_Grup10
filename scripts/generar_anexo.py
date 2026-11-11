@@ -5,8 +5,8 @@ from docx import Document
 from docx.shared import Cm,Pt,RGBColor
 import re
 root=Path(__file__).resolve().parents[1]
-source=root/'docs/14-anexo-version-actual.md'
-target=root/'docs/14-anexo-version-actual.docx'
+source=root/'docs_pc2/14-anexo-version-actual.md'
+target=root/'docs_pc2/14-anexo-version-actual.docx'
 doc=Document()
 section=doc.sections[0]
 section.top_margin=Cm(2.3);section.bottom_margin=Cm(2.2)
@@ -35,7 +35,7 @@ doc.core_properties.author='Grupo 10 - Santa Cruz Basilio, López Arteaga, Pumay
 target.parent.mkdir(parents=True,exist_ok=True)
 doc.save(target)
 # Incorporar una sola vez el contenido técnico al informe grupal, sin sustituir sus capítulos existentes.
-report_path=root/'docs/01-informe-PC2.docx'
+report_path=root/'docs_pc2/01-informe-PC2.docx'
 if report_path.exists():
     report=Document(report_path)
     annex_title='ANEXO DE ACTUALIZACIÓN: INTEGRACIÓN DEL GRUPO 10'

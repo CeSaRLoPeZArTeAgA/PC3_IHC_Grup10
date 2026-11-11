@@ -32,7 +32,7 @@ let s=base('TriageVoz Rural',1);
 text(s,'Pre-triaje multimodal en postas rurales',0.7,1.70,12,0.70,{fontSize:27,bold:true,color:C.blue});
 box(s,0.70,2.67,11.88,2.62,C.ice,C.line);
 text(s,'Grupo 10  ·  CC451 Interacción Humano-Computador',1.05,2.95,11.20,0.44,{fontSize:20,bold:true});
-text(s,'Santa Cruz Basilio, Jesus Diego — 20235005G\nLópez Arteaga, César Omar — 20215508C\nPumayauli Evangelista, Bryan José — 20212209E',1.05,3.53,10.8,1.4,{fontSize:19,breakLine:false});
+text(s,'Santa Cruz Basilio, Jesus Diego — 20235005G\nLópez Arteaga, César Omar — 20236743A\nPumayauli Evangelista, Bryan José — 20212209E',1.05,3.53,10.8,1.4,{fontSize:19,breakLine:false});
 text(s,'Prototipo educativo con casos ficticios; no valida ni sustituye una valoración médica.',0.74,5.70,11.9,0.58,{fontSize:16,color:C.red});
 
 s=base('01 · Problema y propósito',2);
@@ -81,7 +81,7 @@ bullet(s,'Validación de respuestas y errores HTTP.',5.28,4.80,7.12,{fontSize:17
 text(s,'No se presentan como pruebas clínicas o ensayos con pacientes.',1.04,6.22,11.21,0.43,{fontSize:15,color:C.red});
 
 s=base('08 · Límites y trabajo pendiente',9);
-const pending=['Evaluación de usabilidad con personas voluntarias y criterios medibles.','Autenticación, roles clínicos, privacidad y seguridad de datos reales.','Validación lingüística; quechua está simulado.','Conectividad entre equipos, seguimiento clínico y despliegue remoto.','Capturas verificables disponibles; video personal de sustentación pendiente.'];
+const pending=['Evaluación de usabilidad con personas voluntarias y criterios medibles.','Autenticación, roles clínicos, privacidad y seguridad de datos reales.','Validación lingüística; quechua está simulado.','Conectividad entre equipos, seguimiento clínico y despliegue remoto.','Capturas actualizadas y video de sustentación de cada integrante.'];
 pending.forEach((t,i)=>bullet(s,t,0.87,1.78+i*0.83,11.56,{fontSize:18}));
 text(s,'Nunca utilizar datos reales de salud en esta versión educativa.',0.95,6.20,11.4,0.52,{fontSize:18,bold:true,color:C.red});
 

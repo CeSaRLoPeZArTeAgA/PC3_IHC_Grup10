@@ -1,0 +1,24 @@
+TriageVoz Rural R5 · Tarea 2 · LEC-LAB 11
+
+RESULTADO AUTOMATIZADO:
+python -m unittest discover -s tests -q => Ran 44 tests / OK.
+node --check static/app.js => sintaxis válida.
+Python compileall => válido.
+
+Flujos comprobados con TestClient:
+- Inicio por WebSocket y recepción de respuesta.
+- Cambio manual de perfil, seis rasgos y prompt en vivo.
+- Adaptación textual ante rutina, confusión, miedo y prisa.
+- Conservación del contexto y desactivación voluntaria de adaptación.
+- Mensaje de alarma prioritario, sin pasar por LLM.
+- Proveedores externos Groq/Gemini mediante transporte SIMULADO.
+- Audio por WebSocket usando transcripción Whisper SIMULADA.
+- Evidencias HTML/CSS/JS renderizadas con Chromium sin errores de JavaScript.
+
+NO VERIFICADO:
+- Micrófono físico / cancelación de eco y barge-in en el equipo del usuario.
+- Llamadas reales a Whisper, Groq GPT-OSS o Gemini (sin claves privadas).
+- Precisión clínica, seguridad médica ni eficacia de triaje en la práctica.
+
+Las capturas contienen datos ficticios. La interfaz y el motor son reales;
+solo el transporte HTTP/WebSocket del navegador se sustituyó por simulación en las capturas.

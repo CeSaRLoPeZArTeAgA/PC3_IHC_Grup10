@@ -1,0 +1,11 @@
+TRIAGEVOZ RURAL - LEC-LAB 11 - TAREA 2 - R5
+1. Extrae esta carpeta. No mezcles R4 y R5.
+2. Abre PowerShell en la carpeta que contiene start.py.
+3. py -3.11 -m venv .venv
+4. .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+5. Copy-Item .env.example .env   (si no existe .env)
+6. Agrega claves de Groq/Gemini solo si usarás IA o voz.
+7. .\.venv\Scripts\python.exe start.py
+8. Abre http://127.0.0.1:8022 y verifica LEC11-T2-2026.11.10-R5.
+9. Prueba sin claves con Iniciar solo texto.
+10. Ctrl+C para detener.

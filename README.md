@@ -1,60 +1,55 @@
-# TriageVoz Rural — PC2 CC451 IHC
+# TriageVoz Rural PC3 — Aplicación unificada
 
-> **Integrantes, Grupo 10 — CC451 PC2:** Santa Cruz Basilio, Jesus Diego — 20235005G | López Arteaga, César Omar — 20215508C | Pumayauli Evangelista, Bryan José — 20212209E.
+Proyecto académico UNI CC451, Grupo 10. Se conserva la interfaz corporal, el flujo paciente–médico y la PWA de PC2; se integra el motor de intents y personalidad adaptativa del Lab11 dentro de **una sola interfaz**. El diseño conversacional toma como referencia la estructura centrada en voz de VaaniCare, sin copiar su código.
 
-**Proyecto académico** de pre-triaje asistido por voz y silueta corporal para postas de salud rurales.
+## Inicio manual en Windows
 
-**Integrantes:** Santa Cruz Basilio, Jesus Diego (20235005G); López Arteaga, César Omar (20215508C); Pumayauli Evangelista, Bryan José (20212209E). · Universidad Nacional de Ingeniería · CC451 · 2026-II.
+Requiere Node.js 20 o superior. Abre PowerShell en esta carpeta y ejecuta:
 
-## Instalación
+```powershell
+Copy-Item .env.example .env
+notepad .env
+node server.mjs
+```
 
-Requiere **Node.js 20 o superior**.
+Completa las variables `GROQ_API_KEY` y `GEMINI_API_KEY` con claves **nuevas** en `.env`. No publiques el archivo. Sin claves puedes probar el chat textual y los intents; las funciones remotas no se activarán.
 
-1. Clonar este repositorio.
-2. Ejecutar `npm start`.
-3. Abrir `http://127.0.0.1:4173`.
-4. Ejecutar pruebas con `npm test`.
+Para la transcripción experimental de quechua, define `GEMINI_AUDIO_MODEL=gemini-3.8-flash`. El servidor consulta la lista de modelos de tu clave y, si recibe un 404, prueba otro modelo disponible. Puedes comprobar la configuración abriendo `http://127.0.0.1:4173/api/gemini/models` (solo muestra nombres y estados, nunca las claves). Si no hay ningún modelo compatible con audio, el programa lo informa y mantiene entrada por texto.
 
-## Recorrido de demostración
+Abre **http://127.0.0.1:4173**. También puedes iniciar con `INICIAR_PC3.bat`. **No necesitas Python, `uvicorn` ni iniciar una segunda página en el puerto 8022.**
 
-1. Seleccionar idioma y accesibilidad (la opción quechua solo se simula).
-2. Comenzar como paciente; escoger la región del cuerpo en la silueta o escribir/dictar la molestia.
-3. Confirmar explícitamente la región corporal y responder las preguntas de entrevista.
-4. Revisar la información, generar resumen de datos declarados y enviar caso ficticio.
-5. Copiar el código de caso, abrir el rol «Médico remoto (demo)», consultar caso, confirmar recepción y responder.
-6. Volver al paciente y comprobar el estado de recepción.\n7. En el rol médico se muestra la **bandeja de los últimos casos ficticios** (enviados y recibidos). Puede abrirlos sin copiar el código. No es una videollamada ni una sesión en tiempo real.
+## Interacción
 
-La voz usa Web Speech API cuando el navegador es compatible. La alternativa textual siempre está disponible; puede operar sin permisos de micrófono. Las preferencias de accesibilidad se conservan localmente. Los casos ficticios persisten en JSON en el equipo.
+1. En la pantalla **TriageVoz Rural PC3**, elige **Paciente** o **Personal de salud**. Este último entra directamente a la bandeja de casos compartidos y puede atender cada registro.
+2. Como paciente, selecciona **español o quechua sureño experimental**, contraste, tamaño del texto y lectura por voz. Luego escoge **Asistente de voz** o **Formulario táctil**. Ambos usan la misma PWA y el mismo servidor; hay un botón **Regresar** en las pantallas posteriores al inicio.
+3. En voz, pulsa **Iniciar entrevista**; el asistente muestra una pregunta y espera respuesta. La silueta contigua marca la región si se reconoce de forma inequívoca en el relato; puedes tocar otra zona para corregirla.
+4. Para voz, pulsa **Activar voz una sola vez** y acepta el permiso. El navegador detecta turnos mediante nivel de audio, envía el fragmento y el asistente intenta responder por voz. También puedes escribir si el entorno es ruidoso o una API falla.
+5. Al finalizar las cuatro preguntas de voz, el asistente muestra el resumen y pregunta si es correcto. Responde **sí, confirmo** para registrar automáticamente el caso en el servidor. Aparece el código **SALA-XXXXXXXXXXXX** y el asistente lo lee si está activada la voz. También se puede transferir la información al formulario sin registrarla todavía.
+6. Desde la bienvenida pulsa **Revisión de diagnóstico · Consultar mi caso**, ingresa el código y consulta si está **en espera de evaluación** o si hay una **respuesta profesional** disponible.
+7. El personal de salud abre cada caso, confirma la recepción y puede pulsar **Generar propuesta de evaluación con IA**. El sistema coloca un borrador de hipótesis y posibles evaluaciones/exámenes en **Respuesta profesional simulada**. El médico debe leerlo, corregirlo y pulsar **Enviar respuesta**: nunca se envía automáticamente.
 
-## LLM opcional
+Al confirmar el resumen de voz, el caso queda guardado antes de ofrecer **Culminar triaje**, que vuelve a la pantalla inicial. En el formulario, el mismo botón aparece después del envío. Los casos ficticios se almacenan en `data/runtime.json` y se mantienen al reiniciar el servidor.
 
-El servidor contiene un adaptador para Gemini; nunca poner claves en archivos subidos a GitHub.
+La interfaz incluye un modo de **alto contraste** para las pantallas de inicio, selección, voz, silueta y bandeja, con contraste explícito en las burbujas del paciente y del asistente.
 
-PowerShell: `$env:GEMINI_API_KEY="TU_CLAVE"; $env:GEMINI_MODEL="gemini-2.5-flash"; npm start`
+## Modelo híbrido
 
-Sin clave se muestra un resumen **determinista simulado**. El modelo objetivo mencionado en LEC06 no se declara disponible sin verificarlo.
+- Intents y seguridad determinista: `assistant.mjs` (adaptación de Lab11).
+- Consultas complejas: Groq o Gemini, claves locales configuradas en el servidor.
+- Español hablado: Groq Whisper STT; síntesis del navegador (`es-PE`).
+- Quechua: Gemini multimodal experimental para transcripción de audio; respuesta textual quechua con frases guiadas; Gemini TTS experimental. La precisión de reconocimiento, traducción y pronunciación **no está validada**. No se usa una voz española como sustituto silencioso. Sin servicio disponible se muestra el error y se conserva la opción textual.
+- Memoria de sesión: slots de síntomas en memoria; preferencias persistentes por pseudónimo en JSON. Las transcripciones de voz no se almacenan automáticamente.
 
-## Contenido
+## Pruebas
 
-- `server.mjs`: servidor Node y API simulada de casos.
-- `public/`: PWA, estilos y tres propuestas de interfaz.
-- `docs/`: PACT, stakeholders, historias, trazabilidad, C4, Gantt, navegación, criterios y límites.
-- `tests/`: pruebas funcionales y de integración (incluyen escrituras concurrentes y reintentos).
-- `data/`: datos ficticios para demostración.
-- `LICENSE`: MIT.
+```powershell
+npm test
+```
 
-**Estado de entrega:** código, documentación académica en **Word y PDF**, informe de aporte personal, capturas de la simulación, tres alternativas de diseño, diagramas C4/Gantt, fuentes LEC06 y LEC07. Consulta el [índice de evidencias de la PC2](docs/00-ENTREGA-PC2.md).
+El directorio `voice-engine/` conserva las fuentes y pruebas de Lab11 para consulta y trazabilidad, pero **no se ejecuta** en esta versión integrada.
 
-## Seguridad
+## Seguridad y límites
 
-El servidor solo escucha en 127.0.0.1. Los códigos de caso y la simulación de roles NO constituyen autenticación ni autorización clínica. No cargar nombres, imágenes, síntomas ni historiales de personas reales.
+Aplicación académica con **datos ficticios exclusivamente**. No hay autenticación médica ni validación clínica, y no sustituye un profesional. La IA genera únicamente hipótesis orientativas para revisión profesional, nunca diagnósticos definitivos. El código de caso sirve como identificador, **no como mecanismo seguro de acceso**; no introduzcas información clínica real. El reconocimiento de quechua exige pruebas con personas quechuahablantes antes de cualquier evaluación real. En una urgencia, contactar servicios de emergencia.
 
-## Estado de integración y evidencias vigentes
-
-El rol médico es una **simulación multirol en localhost**, no teleconsulta en tiempo real. Para los cambios después de la integración de Bryan Pumayauli y Jesus Santa Cruz, consultar [anexo técnico](docs/14-anexo-version-actual.md), [pruebas](docs/06-pruebas-y-evidencias.md) y [arquitectura C4](docs/02-arquitectura-C4.md).
-
-La presentación grupal editable se encuentra en `presentacion/PC2-TriageVoz-Rural-Grupo10.pptx`, generada a partir de `scripts/generar_presentacion.cjs`. Se utiliza material ficticio; las capturas anteriores siguen archivadas como evidencia histórica y deben actualizarse para mostrar el código final.
-
-## Evidencias automatizadas de funcionamiento
-
-Se ejecutó un recorrido E2E real con Chromium en GitHub Actions. Consulta el [registro de pruebas y cinco capturas PNG](docs/15-evidencias-e2e.md) y su [script de reproducción](scripts/capturar_evidencias_e2e.mjs). El caso E2E utiliza datos ficticios y es diferente de la sesión manual del equipo. No constituye validación clínica.
+Documentación PC2: `docs_pc2/`. Entrega e informe PC3, flujo de trabajo y aportes en Word: `docs_pc3/`. Licencia MIT.

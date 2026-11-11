@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#071a29"><title>TriageVoz Rural · Tarea 2 · Personalidad adaptativa</title>
+<link rel="stylesheet" href="/static/style.css?v=LEC11-T2-2026.11.10-R5"><script defer src="/static/app.js?v=LEC11-T2-2026.11.10-R5"></script>
+</head><body>
+<div class="app-layout">
+  <aside class="side">
+    <div class="side-brand"><div class="brand-icon" aria-hidden="true">✚</div><div><b>TRIAGEVOZ</b><small>RURAL · CC451</small></div></div>
+    <section class="side-group"><h2>Personalidad del asistente</h2><label for="preset">Perfil de referencia</label>
+      <select id="preset" aria-label="Perfil de personalidad"></select><p class="aside-note">Escala de 0 a 10. Modifica cada rasgo para diseñar tu propia personalidad.</p>
+      <div id="sliderList" class="sliders"></div>
+      <div class="side-inline"><button class="ghost full" id="resetProfile" type="button">Restablecer perfil</button></div>
+    </section>
+    <section class="side-group settings-group" id="autoGroup"><h2>Adaptación Tarea 2</h2>
+      <label class="checkline"><input id="adaptiveEnabled" type="checkbox" checked><span>Adaptar personalidad según respuestas</span></label>
+      <p class="aside-note">La personalidad base permanece en los seis controles superiores. El sistema modifica la personalidad efectiva usando señales explícitas del texto.</p>
+      <div class="adaptive-mini"><strong id="sideMode">Modo: rutina</strong><small id="sideReason">El contexto se actualizará al conversar.</small></div>
+    </section>
+    <section class="side-group settings-group"><h2>Modelo de lenguaje y voz</h2>
+      <label for="provider">Proveedor para consultas complejas</label>
+      <select id="provider" aria-label="Proveedor del modelo de lenguaje">
+        <option value="groq">Groq · GPT-OSS (configurable)</option>
+        <option value="gemini">Gemini · Flash (configurable)</option>
+      </select>
+      <p id="modelInfo" class="aside-note">Los intents funcionan sin LLM. Whisper se usa para transcribir voz.</p>
+      <label class="checkline"><input id="tts" type="checkbox" checked><span>Leer respuestas en voz alta</span></label>
+      <label for="sens">Umbral de voz <strong id="sensValue">0.018</strong></label>
+      <input id="sens" type="range" min="0.005" max="0.070" step="0.001" value="0.018"><p class="aside-note">Más bajo = detecta voces suaves; más alto = ignora ruido. Recomiendo 0.012–0.025.</p>
+      <label class="checkline consent"><input id="consent" type="checkbox"><span>Autorizo el envío al proveedor seleccionado para las consultas LLM y a Groq para la transcripción de voz durante esta prueba.</span></label>
+      <p class="aside-note" id="apiNote">Comprobando configuración de proveedores…</p>
+    </section>
+    <section class="side-group settings-group"><h2>Accesibilidad</h2>
+      <label class="checkline"><input id="largeText" type="checkbox"><span>Texto grande</span></label>
+      <label class="checkline"><input id="highContrast" type="checkbox"><span>Contraste alto</span></label>
+      <p class="aside-note">Estas preferencias se guardan en el navegador; no almacenamos síntomas.</p>
+    </section>
+    <div class="side-bottom">TAREA 2 · ADAPTACIÓN EN CONTEXTO<br>LEC11-T2-2026.11.10-R5<br><br>PROTOTIPO ACADÉMICO<br><span>No reemplaza a personal de salud.</span></div>
+  </aside>
+  <main class="workspace">
+    <header class="topbar"><span>UNI / Interacción Humano-Computadora</span><span class="top-status"><span class="status-dot"></span> <b>Tarea 2 · LEC-LAB 11</b> <span class="version-tag" id="versionTag">Versión verificando…</span></span></header>
+    <div class="content">
+      <div class="hero"><div class="hero-title"><div class="hero-icon">✚</div><div><div class="eyebrow">ASISTENTE MULTIMODAL · TELEMEDICINA RURAL</div><h1>TriageVoz Rural</h1><p>Interfaz de voz para recoger síntomas y preparar un resumen orientativo para un profesional de salud.</p></div></div><span class="hero-chip">WebSocket · Whisper · Intents + LLM</span></div>
+      <div class="build-notice"><span>✓ Adaptación explicable de personalidad según respuestas</span><span id="buildNotice">LEC11-T2-2026.11.10-R5 · Puerto independiente</span></div>
+      <div class="metric-row"><div class="metric"><span class="metric-k">Rasgos configurables</span><strong>06</strong><small>Personalidad graduable</small></div><div class="metric"><span class="metric-k">Perfiles de referencia</span><strong>03</strong><small>Mismo diálogo, tres tonos</small></div><div class="metric"><span class="metric-k">Arquitectura</span><strong class="metric-text">Híbrida</strong><small>Intents + LLM intercambiables</small></div></div>
+      <nav class="tabs" role="tablist" aria-label="Secciones de la tarea"><button class="tab active" data-tab="assistant" role="tab" aria-selected="true">◉ Asistente VUI</button><button class="tab" data-tab="dialogues" role="tab" aria-selected="false">▤ Diálogos Tarea 1</button><button class="tab" data-tab="prompt" role="tab" aria-selected="false">◈ Prompt en vivo</button><button class="tab" data-tab="adaptation" role="tab" aria-selected="false">◉ Adaptación Tarea 2</button></nav>
+      <section id="page-assistant" class="page active" role="tabpanel"><div class="section-head"><div><h2>Entrevista conversacional</h2><p>Escucha, transcribe y responde. Las preguntas frecuentes usan intents; las consultas abiertas, el LLM.</p></div><span id="routePill" class="pill">Sin iniciar</span></div>
+        <div class="body-zone"><div class="body-zone-title"><b>Ubicación de la molestia (opcional)</b><small>Entrada táctil alternativa inspirada en el enfoque multimodal; selecciona una zona para escribirla antes de enviarla.</small></div>
+          <div class="zone-buttons" aria-label="Zonas corporales">
+            <button type="button" class="zone-button" data-zone="cabeza">Cabeza</button>
+            <button type="button" class="zone-button" data-zone="pecho">Pecho</button>
+            <button type="button" class="zone-button" data-zone="abdomen">Abdomen</button>
+            <button type="button" class="zone-button" data-zone="brazos">Brazos</button>
+            <button type="button" class="zone-button" data-zone="piernas">Piernas</button>
+            <button type="button" class="zone-button" data-zone="otra zona">Otra zona</button>
+          </div>
+        </div>
+        <div class="chat-shell"><div class="chat-head"><div class="agent-avatar">✚</div><div><strong>TriageVoz · asistente virtual</strong><small id="modeText">Esperando inicio de sesión</small></div><span id="micLamp" class="mic-lamp">Micrófono inactivo</span></div>
+          <div id="messages" class="messages" aria-live="polite"><div class="empty-chat"><div class="empty-icon">🎧</div><h3>Tu conversación comienza aquí</h3><p>Inicia por voz para usar Whisper o por texto para probar los intents. Nunca uses datos de pacientes reales.</p></div></div>
+          <div id="liveText" class="live-text">La voz se transcribe después de cada intervención. Si no se detecta la pausa, usa «Captura manual».</div>
+          <div class="audio-meter" aria-label="Nivel de audio del micrófono"><span id="voiceIndicator">Esperando voz</span><div class="level-track"><div id="levelFill"></div></div></div>
+          <div class="controls"><button id="startVoice" class="btn primary">🎙 Iniciar con micrófono</button><button id="startText" class="btn secondary">⌨ Iniciar solo texto</button><button id="voiceManual" class="btn secondary" disabled>🎙 Captura manual</button><button id="stop" class="btn outline" disabled>■ Detener</button><button id="repeat" class="btn outline" disabled>🔊 Repetir</button></div>
+          <div class="input-row"><input id="textInput" type="text" maxlength="2000" placeholder="Escribe aquí tu respuesta o consulta…" aria-label="Mensaje del paciente" disabled><button id="send" class="btn primary" disabled>Enviar</button></div>
+          <div class="chat-foot"><span id="status">Listo para iniciar. Autoriza el micrófono solo si usarás voz.</span><span>Ruta: <b id="routeName">—</b></span></div>
+        </div>
+        <div class="info-note"><b>Alcance y seguridad.</b> Este prototipo no diagnostica ni clasifica urgencias. Las reglas de alarma son ilustrativas y no sustituyen una evaluación médica. En una posible emergencia, solicita atención urgente.</div>
+      </section>
+      <div id="adaptStatus" class="adapt-status" aria-live="polite" hidden>
+        <span id="adaptMode">Modo adaptativo: rutina</span><span id="adaptWhy">Inicia una conversación.</span>
+      </div>
+      <section id="page-dialogues" class="page" role="tabpanel" hidden><div class="section-head"><div><h2>Tarea 1 · Tres personalidades</h2><p>Mismo caso, idénticas cuatro intervenciones del paciente y tres perfiles graduados. Compara cómo cambia el estilo de las respuestas.</p></div></div>
+        <div class="action-strip"><div><strong>Comparación de cuatro intercambios</strong><small id="originExamples">Ejemplos ilustrativos precargados; no generados en esta sesión.</small></div><button id="generate" class="btn primary">✦ Generar tres diálogos con IA</button></div>
+        <div id="examples" class="examples"></div>
+        <section class="compare-llm"><h3>Comparación reproducible de modelos (datos inventados)</h3>
+          <p>Envía exactamente el mismo prompt y un caso ficticio a Groq y Gemini, sin usar tu entrevista. Requiere las dos API keys para comparar resultados completos.</p>
+          <button id="compareLLM" class="btn secondary" type="button">Comparar Groq y Gemini</button>
+          <div id="compareResults" class="compare-results" aria-live="polite"></div>
+        </section><div class="choice"><b>Prompt recomendado:</b> «Cercana y comprensiva», por su calidez, claridad y paciencia. En cualquier perfil prevalecen las restricciones de seguridad médica y la revisión humana.</div>
+      </section>
+      <section id="page-prompt" class="page" role="tabpanel" hidden><div class="section-head"><div><h2>Prompt del sistema en tiempo real</h2><p>Los seis deslizadores actualizan el prompt. Puedes modificarlo para consultas LLM; las respuestas por intents conservan sus reglas de seguridad.</p></div><span class="pill" id="promptState">Perfil: referencia</span></div>
+        <div class="prompt-actions"><button id="copyPrompt" class="btn secondary">Copiar prompt</button><button id="restorePrompt" class="btn outline">Restaurar prompt generado</button><span id="promptSaved" class="hint"></span></div>
+        <textarea id="promptText" class="prompt-editor" spellcheck="false" aria-label="Prompt de personalidad"></textarea>
+        <div class="principles"><h3>Lineamientos que se evidencian en la Tarea 1</h3><div class="principle-grid"><div><b>Personalidad coherente</b><p>Rasgos explícitos en cada turno y ajuste desde controles.</p></div><div><b>Divulgación progresiva</b><p>Una pregunta relevante por intervención.</p></div><div><b>Confirmaciones según riesgo</b><p>Revisión del resumen antes de concluir.</p></div><div><b>Supervisión humana</b><p>El resumen es para revisión por personal sanitario.</p></div></div></div>
+      </section>
+      <section id="page-adaptation" class="page" role="tabpanel" hidden>
+        <div class="section-head"><div><h2>Tarea 2 · Personalidad según la situación</h2>
+          <p>Comparación explicable de rasgos efectivos. La detección usa únicamente palabras explícitas; no infiere emociones desde la voz.</p></div></div>
+        <div class="adapt-preview"><h3>Personalidad efectiva de la última respuesta</h3>
+          <p id="modeExplanation">Inicia una sesión para observar el cambio de perfil.</p>
+          <div class="trait-chart" id="adaptiveTraits"></div>
+        </div>
+        <div class="adaptive-rules"><h3>Reglas de adaptación para una cita y una llamada de emergencia</h3>
+          <div class="rule-grid"><div><b>Rutina</b><p>Conversación cercana, una pregunta por turno.</p></div>
+          <div><b>Confusión</b><p>Explicar con palabras sencillas y mantener la pregunta pendiente.</p></div>
+          <div><b>Preocupación</b><p>Validar brevemente la inquietud y continuar sin diagnosticar.</p></div>
+          <div><b>Prisa</b><p>Respuestas directas y cortas; no se interpreta como urgencia clínica.</p></div>
+          <div><b>Alarma declarada</b><p>Se detiene la entrevista y se orienta a buscar ayuda urgente.</p></div></div>
+        </div>
+        <div class="section-head" style="margin-top:24px"><div><h2>Evidencias reproducibles con casos ficticios</h2>
+          <p>Se generan localmente con las mismas reglas del asistente; no se llama al LLM.</p></div></div>
+        <div id="adaptiveExamples" class="adaptive-examples"></div>
+        <div class="principles"><h3>Seis principios de VUI aplicados</h3><div class="principle-grid">
+          <div><b>Reconocer intención</b><p>Detecta aclaración, prisa, preocupación y alarma explícitas.</p></div>
+          <div><b>Aprovechar contexto</b><p>Conserva los síntomas registrados y el estado conversacional.</p></div>
+          <div><b>Cooperar y responder</b><p>Reformula sin perder la pregunta pendiente.</p></div>
+          <div><b>Divulgación progresiva</b><p>Una pregunta por turno.</p></div>
+          <div><b>Variedad</b><p>Modula la formulación según el perfil efectivo.</p></div>
+          <div><b>Tomar turnos</b><p>Transcripción y respuesta después de cada intervención.</p></div>
+        </div></div>
+      </section>
+      <footer>Versión LEC11-T2-2026.11.10-R5 · Inicio recomendado: INICIAR_TRIAGEVOZ.bat · CC451 · LEC-LAB 11 · Tarea 02 · TriageVoz Rural · Demostración académica sin validación clínica</footer>
+    </div>
+  </main>
+</div>
+</body></html>

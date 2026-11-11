@@ -5,3 +5,5 @@ node_modules/
 data/runtime.json
 data/runtime.json.tmp
 .DS_Store
+
+data/profiles.json
