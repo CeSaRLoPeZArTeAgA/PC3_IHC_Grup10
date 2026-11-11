@@ -138,7 +138,7 @@ workflow.add_heading('2 Flujo del personal de salud', 1)
 for idx, step in enumerate([
     'Abrir Personal de salud y seleccionar un caso de la bandeja o introducir su código.',
     'Consultar síntomas, región, inicio, intensidad, resumen y estado de recepción.',
-    'Confirmar recepción. Opcionalmente solicitar a la IA un borrador con hipótesis y posibles pruebas.',
+    'Confirmar recepción. Opcionalmente generar con IA un borrador de respuesta con personalidad graduable (sin diagnóstico) y confirmarlo antes de registrar.',
     'Verificar el contenido con juicio profesional; corregir o reemplazar el borrador en Respuesta profesional simulada.',
     'Enviar la respuesta. El paciente podrá leerla posteriormente usando su código.',
 ], 1):

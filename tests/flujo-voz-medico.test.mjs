@@ -1,7 +1,19 @@
-import test from 'node:test';
+import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import {handler} from '../server.mjs';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import crypto from 'node:crypto';
+// Aísla las pruebas: nunca deben escribir data/runtime.json ni data/profiles.json reales.
+const tmp=path.join(os.tmpdir(),'triagevoz-voz-'+crypto.randomUUID());
+process.env.STORAGE_FILE=tmp+'.json';
+process.env.PROFILES_FILE=tmp+'-profiles.json';
+const {handler}=await import('../server.mjs');
+after(async()=>{
+  await fs.rm(process.env.STORAGE_FILE,{force:true});
+  await fs.rm(process.env.PROFILES_FILE,{force:true});
+});
 
 test('PC3: confirmar por voz guarda un código y el médico publica su respuesta',async()=>{
   const server=http.createServer(handler);
@@ -26,8 +38,9 @@ test('PC3: confirmar por voz guarda un código y el médico publica su respuesta
     assert.equal(repeat.caseCode,code,'Confirmación repetida no crea un nuevo caso');
     let response=await fetch(base+'/api/cases/by-code?code='+encodeURIComponent(code));
     let record=await response.json();assert.equal(record.region,'Cabeza');assert.equal(record.replies.length,0);
-    const draft=await post('/api/doctor/draft',{code});
-    assert.match(draft.draft,/REVISIÓN MÉDICA|NO VALIDADO/);
+    const draft=await post('/api/doctor/reply-draft',{code,preset:'profesional'});
+    assert.match(draft.draft,/No se emite diagnóstico ni receta/);
+    assert.equal((await fetch(base+'/api/doctor/draft',{method:'POST',body:'{}'})).status,404,'La propuesta con hipótesis diagnósticas ya no existe');
     record=await post('/api/cases/reply',{code,message:'Respuesta profesional revisada para este caso ficticio.'});
     assert.equal(record.replies.length,1);
     response=await fetch(base+'/api/cases/by-code?code='+encodeURIComponent(code));

@@ -169,3 +169,26 @@ body.high #voiceBodyMap .voice-zone-selected rect,body.high #voiceBodyMap .voice
 .vui-finish,.case-finish{background:#0b7188!important;color:#fff!important;border:1px solid #0b7188!important;margin-top:13px}
 body.high .vui-finish,body.high .case-finish{background:#edb34f!important;color:#111!important;border-color:#edb34f!important}
 
+/* Tarea 1 · Lec-LAB 11: panel de personalidad graduable (paciente y rol médico). */
+.personality-panel{border:1px solid #c4dce2;border-radius:12px;background:#f5fafb;padding:10px 12px;margin:10px 0}
+.personality-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;color:#0a5267}
+.personality-badge{background:#0b7188;color:#fff;border-radius:999px;padding:2px 10px;font-size:.75rem;font-weight:700}
+.personality-presets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.personality-presets button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:7px 9px;border:1px solid #abcbd3;border-radius:9px;background:#fff;min-height:48px}
+.personality-presets button small{font-size:.72rem;color:#597681}
+.personality-presets button.active{border-color:#0b7188;background:#dff0f3;box-shadow:inset 0 0 0 1px #0b7188}
+.personality-traits{margin-top:8px}
+.personality-traits summary{cursor:pointer;font-size:.85rem;color:#0b5870;font-weight:600}
+.trait-row{display:grid;grid-template-columns:96px minmax(0,1fr) 26px;align-items:center;gap:4px 8px;margin-top:6px;font-size:.85rem}
+.trait-row input[type=range]{width:100%;accent-color:#0b7188}
+.trait-row output{font-weight:700;text-align:right;color:#0a5267}
+.trait-row small{grid-column:2/4;font-size:.7rem;color:#6b858d;margin-top:-4px}
+.reply-draft-box{margin:12px 0}
+.reply-confirm{border:2px solid #b8740a;background:#fff7e8;border-radius:10px;padding:10px 12px;margin:10px 0}
+.reply-confirm blockquote{margin:8px 0;padding:6px 10px;border-left:3px solid #b8740a;background:#fff;white-space:pre-wrap;font-size:.9rem}
+@media(max-width:710px){.personality-presets{grid-template-columns:1fr}.trait-row{grid-template-columns:84px minmax(0,1fr) 24px}}
+body.high .personality-panel,body.high .reply-confirm,body.high .reply-confirm blockquote{background:#161616!important;color:#fff!important;border-color:#f1f1f1!important}
+body.high .personality-head,body.high .personality-traits summary,body.high .trait-row output,body.high .personality-presets button small,body.high .trait-row small{color:#fff!important}
+body.high .personality-presets button{background:#252525!important;color:#fff!important;border-color:#eee!important}
+body.high .personality-presets button.active,body.high .personality-badge{background:#edb34f!important;color:#111!important;border-color:#edb34f!important}
+body.high .personality-presets button.active small{color:#111!important}

@@ -59,12 +59,12 @@ function scheduleRemoteProfileSave(){
   clearTimeout(profileTimer);
   profileTimer=setTimeout(async()=>{
     if(!/^[a-zA-Z0-9_-]{3,45}$/.test(profileKey()))return;
-    try{await fetch('/api/profiles',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id:profileKey(),profile:{...userProfile,persona:$('persona').value}})});$('profileState').textContent='Preferencias guardadas en servidor'}catch{$('profileState').textContent='Preferencias locales; servidor no disponible'}
+    try{await fetch('/api/profiles',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id:profileKey(),profile:{...userProfile,...(window.triagePersonality?{persona:window.triagePersonality().preset,personality:window.triagePersonality().personality}:{persona:$('persona').value})}})});$('profileState').textContent='Preferencias guardadas en servidor'}catch{$('profileState').textContent='Preferencias locales; servidor no disponible'}
   },700);
 }
 async function loadRemoteProfile(){
   if(!/^[a-zA-Z0-9_-]{3,45}$/.test(profileKey())){$('profileState').textContent='Usa 3–45 letras, números, guiones o _';return}
-  try{const r=await fetch('/api/profiles?id='+encodeURIComponent(profileKey()));const data=await r.json();if(!r.ok)throw Error();profileReady=true;if(data.profile){userProfile={...userProfile,...data.profile};$('language').value=userProfile.language||'es';$('contrast').checked=!!userProfile.contrast;$('large').checked=!!userProfile.large;$('speak').checked=!!userProfile.speak;$('persona').value=data.profile.persona||'calida';saveProfile();$('profileState').textContent='Perfil recuperado'}else{saveProfile();$('profileState').textContent='Perfil nuevo creado'}}catch{$('profileState').textContent='No se pudo cargar el perfil'}
+  try{const r=await fetch('/api/profiles?id='+encodeURIComponent(profileKey()));const data=await r.json();if(!r.ok)throw Error();profileReady=true;if(data.profile){userProfile={...userProfile,...data.profile};$('language').value=userProfile.language||'es';$('contrast').checked=!!userProfile.contrast;$('large').checked=!!userProfile.large;$('speak').checked=!!userProfile.speak;if(window.triageSetPersonality)window.triageSetPersonality(data.profile.personality,data.profile.persona);else $('persona').value=data.profile.persona||'acompanante';saveProfile();$('profileState').textContent='Perfil recuperado'}else{saveProfile();$('profileState').textContent='Perfil nuevo creado'}}catch{$('profileState').textContent='No se pudo cargar el perfil'}
 }
 $('loadProfile').onclick=loadRemoteProfile;
 $('profileId').addEventListener('input',()=>{profileReady=false;$('profileState').textContent='Pulsa Cargar perfil'});
@@ -393,6 +393,19 @@ $('reply').onclick=async()=>{
   $('replyState').textContent='Esta respuesta ya está registrada. Modifica el texto para enviar otra.';
   return;
  }
+ askReplyConfirmation(response);
+};
+// Confirmación explícita antes de registrar (Lab 10/11): el borrador de IA nunca se envía solo.
+const replyConfirm=document.createElement('div');replyConfirm.id='replyConfirm';replyConfirm.className='reply-confirm';replyConfirm.hidden=true;replyConfirm.setAttribute('role','alertdialog');replyConfirm.setAttribute('aria-labelledby','replyConfirmTitle');
+replyConfirm.innerHTML='<strong id="replyConfirmTitle">¿Registrar esta respuesta?</strong><blockquote id="replyConfirmText"></blockquote><div class="actions"><button type="button" id="replyConfirmYes" class="primary">Sí, registrar respuesta</button><button type="button" id="replyConfirmNo">Cancelar</button></div>';
+$('reply').after(replyConfirm);
+function askReplyConfirmation(text){replyConfirm.dataset.code=doctorCase.code;$('replyConfirmText').textContent=text;replyConfirm.hidden=false;$('replyConfirmYes').focus()}
+$('replyConfirmNo').onclick=()=>{replyConfirm.hidden=true;$('replyState').textContent='Envío cancelado. La respuesta no se registró.';$('message').focus()};
+$('message').addEventListener('input',()=>{replyConfirm.hidden=true});
+$('replyConfirmYes').onclick=async()=>{
+ replyConfirm.hidden=true;
+ if(!doctorCase||doctorCase.code!==replyConfirm.dataset.code){$('replyState').textContent='Cambiaste de caso; vuelve a pulsar Enviar respuesta.';return}
+ const response=$('replyConfirmText').textContent;
  const button=$('reply');button.disabled=true;
  try{
   const saved=await jsonPost('/api/cases/reply',{code:doctorCase.code,message:response});

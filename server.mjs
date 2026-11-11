@@ -4,6 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import {newSession,replyTo,confirmedSession} from './assistant.mjs';
+import {normalizePersonality,presetKey,matchPreset,buildCaseReplyPrompt,localCaseReply} from './public/personality.js';
 import {listGeminiModels,transcribeQuechua} from './gemini-api.mjs';
 const root=path.dirname(fileURLToPath(import.meta.url));
 // Claves exclusivamente del servidor; el navegador nunca recibe secretos.
@@ -88,29 +89,33 @@ if(!rsp.ok)throw Error('LLM unavailable');const obj=await rsp.json();const s=obj
 return {...fallback,mode:'gemini',summary:parsed.summary.slice(0,1400),disclaimer:'Generado por IA sin validación médica.'};
 }catch{return {...fallback,warning:'Servicio remoto no disponible; se utilizó resumen local simulado.'}}finally{clearTimeout(timer)}}
 const byCode=c=>{const s=str(c,32).toUpperCase().replace(/^SALA-/,'').trim();return cases.find(x=>x.code===s||x.code===str(c,32).toUpperCase().trim());};
-async function doctorDraft(c){
- const context=JSON.stringify({region:c.region,answers:c.answers,summary:c.summary});
- const fallback='BORRADOR DE APOYO — NO VALIDADO POR UN PROFESIONAL\n\nRelato registrado: '+(c.summary||context)+'\n\nInformación adicional a verificar: signos vitales, antecedentes, alergias, medicación, síntomas asociados y señales de alarma.\n\nHipótesis diagnósticas y exámenes: requieren valoración directa del profesional. No se generaron sugerencias específicas porque el modelo de IA no está disponible.\n\nEl profesional debe editar y aprobar esta respuesta antes de enviarla.';
- const system='Eres un asistente para personal médico en una DEMOSTRACIÓN ACADÉMICA con datos ficticios. Genera un BORRADOR, NO un diagnóstico final. Escribe en español peruano, conciso. Apartados: 1) Resumen del caso, 2) Hipótesis diagnósticas diferenciales POSIBLES con incertidumbre y datos que faltan, 3) Preguntas, signos físicos y exámenes que el médico PODRÍA valorar según hallazgos, 4) Signos de alarma para evaluación presencial urgente, 5) Nota de revisión clínica obligatoria. No inventes hallazgos, constantes ni resultados. No prescribas medicamentos, dosis ni tratamientos. No afirmes haber examinado al paciente. No des indicaciones clínicas como definitivas. Máximo 1200 caracteres.';
+// Tarea 1 (Lec-LAB 11): borrador de respuesta al paciente con personalidad graduable.
+// Catálogo cerrado de cuidados/alarmas por zona; nunca se registra sin confirmación humana.
+async function caseReplyDraft(c,raw){
+ const personality=normalizePersonality(raw?.personality,raw?.preset||'profesional');
+ const base={personality,preset:matchPreset(personality)};
+ const fallback={...base,draft:localCaseReply(personality,c),generated:false,mode:'simulacion'};
+ const system=buildCaseReplyPrompt(personality,c);
+ const instruction='Redacta solo el borrador de respuesta, sin encabezados ni explicaciones.';
  try{
-  let answer='';
+  let text='',mode='';
   if(process.env.GROQ_API_KEY){
-   const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+process.env.GROQ_API_KEY},body:JSON.stringify({model:process.env.GROQ_CHAT_MODEL||'openai/gpt-oss-120b',messages:[{role:'system',content:system},{role:'user',content:context}],temperature:0.2,max_tokens:650}),signal:AbortSignal.timeout(18000)});
-   if(!r.ok)throw Error('Modelo no disponible');const j=await r.json();answer=str(j.choices?.[0]?.message?.content,1500);
+   const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+process.env.GROQ_API_KEY},body:JSON.stringify({model:process.env.GROQ_CHAT_MODEL||'openai/gpt-oss-120b',messages:[{role:'system',content:system},{role:'user',content:instruction}],temperature:0.5,max_tokens:450}),signal:AbortSignal.timeout(18000)});
+   if(!r.ok)throw Error('Modelo no disponible');const j=await r.json();text=str(j.choices?.[0]?.message?.content,1200);mode='groq';
   }else if(process.env.GEMINI_API_KEY){
    const model=process.env.GEMINI_MODEL||'gemini-2.5-flash';
-   const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':process.env.GEMINI_API_KEY},body:JSON.stringify({contents:[{parts:[{text:system+'\nCASO: '+context}]}],generationConfig:{temperature:0.2,maxOutputTokens:700}}),signal:AbortSignal.timeout(18000)});
-   if(!r.ok)throw Error('Modelo no disponible');const j=await r.json();answer=str(j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join(' '),1500);
+   const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':process.env.GEMINI_API_KEY},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts:[{text:instruction}]}],generationConfig:{temperature:0.5,maxOutputTokens:450}}),signal:AbortSignal.timeout(18000)});
+   if(!r.ok)throw Error('Modelo no disponible');const j=await r.json();text=str(j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join(''),1200);mode='gemini';
   }
-  return {draft:answer?'BORRADOR IA — REVISIÓN MÉDICA OBLIGATORIA\n\n'+answer:fallback,generated:!!answer};
- }catch{return {draft:fallback,generated:false,warning:'El servicio de IA no respondió; se preparó un borrador básico sin hipótesis clínicas.'}}
+  return text?{...base,draft:text,generated:true,mode}:fallback;
+ }catch{return {...fallback,warning:'Servicio de IA no disponible; se usó el borrador local con la misma personalidad.'}}
 }
 async function handler(req,res){const u=new URL(req.url||'/', 'http://localhost');try{
 if(req.method==='GET'&&u.pathname==='/api/gemini/models'){
  const result=await listGeminiModels(process.env.GEMINI_API_KEY);
  return send(res,200,{...result,configured:!!process.env.GEMINI_API_KEY,selectedAudioModel:process.env.GEMINI_AUDIO_MODEL||process.env.GEMINI_MODEL||'gemini-3.8-flash'});
 }
-if(req.method==='POST'&&u.pathname==='/api/assistant/start'){const b=await read(req);return send(res,200,newSession(b.lang,b.persona))}
+if(req.method==='POST'&&u.pathname==='/api/assistant/start'){const b=await read(req);return send(res,200,newSession(b.lang,b.persona,b.personality))}
 if(req.method==='POST'&&u.pathname==='/api/assistant/reply'){
  const b=await read(req),result=await replyTo(b);
  if(result.route==='confirmacion'){
@@ -138,7 +143,7 @@ if(u.pathname==='/api/profiles'&&req.method==='PUT'){
   const b=await read(req),id=str(b.id,45);
   if(!/^[a-zA-Z0-9_-]{3,45}$/.test(id))return send(res,400,{error:'Identificador no válido'});
   const p=b.profile||{};
-  const allowed={language:str(p.language,8),contrast:!!p.contrast,large:!!p.large,speak:!!p.speak,rhythm:p.rhythm==='pausado'?'pausado':'normal',errorCount:Math.min(999,Math.max(0,Number(p.errorCount)||0)),avgTimePerQuestion:Math.min(999,Math.max(0,Number(p.avgTimePerQuestion)||0)),persona:['calida','profesional','breve'].includes(p.persona)?p.persona:'calida',updatedAt:new Date().toISOString()};
+  const allowed={language:str(p.language,8),contrast:!!p.contrast,large:!!p.large,speak:!!p.speak,rhythm:p.rhythm==='pausado'?'pausado':'normal',errorCount:Math.min(999,Math.max(0,Number(p.errorCount)||0)),avgTimePerQuestion:Math.min(999,Math.max(0,Number(p.avgTimePerQuestion)||0)),persona:presetKey(p.persona),personality:normalizePersonality(p.personality,p.persona),updatedAt:new Date().toISOString()};
   profiles[id]=allowed;
   await fs.mkdir(path.dirname(profilesFile),{recursive:true});
   const temp=profilesFile+'.'+crypto.randomUUID()+'.tmp';
@@ -150,9 +155,9 @@ if(req.method==='GET'&&u.pathname==='/api/rooms')return send(res,200,cases.slice
 if(req.method==='POST'&&u.pathname==='/api/llm')return send(res,200,await summarize(await read(req)));
 if(req.method==='POST'&&u.pathname==='/api/cases'){const obj=clean(await read(req));if(!obj.region&&!obj.answers.motivo)return send(res,422,{error:'Indique la región o motivo'});const rec={id:crypto.randomUUID(),code:crypto.randomBytes(6).toString('hex').toUpperCase(),...obj,status:'enviado',createdAt:new Date().toISOString(),ackAt:null,replies:[]};cases.push(rec);await save();return send(res,201,rec);}
 if(req.method==='GET'&&u.pathname==='/api/cases/by-code'){const c=byCode(u.searchParams.get('code'));return c?send(res,200,c):send(res,404,{error:'Caso simulado no encontrado'});}
-if(req.method==='POST'&&u.pathname==='/api/doctor/draft'){
+if(req.method==='POST'&&u.pathname==='/api/doctor/reply-draft'){
  const b=await read(req),c=byCode(b.code);if(!c)return send(res,404,{error:'Caso no encontrado'});
- return send(res,200,await doctorDraft(c));
+ return send(res,200,await caseReplyDraft(c,b));
 }
 if(req.method==='POST'&&(u.pathname==='/api/cases/ack'||u.pathname==='/api/cases/reply')){const b=await read(req),c=byCode(b.code);if(!c)return send(res,404,{error:'Código no encontrado'});
 if(u.pathname.endsWith('/ack')){

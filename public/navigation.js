@@ -1,4 +1,5 @@
 // Navegación PC3: bienvenida > opciones > voz/formulario > revisión; personal de salud por separado.
+import {mountPersonalityPanel} from './personality-ui.js';
 const get=id=>document.getElementById(id);
 const main=document.querySelector('main');
 const home=document.createElement('section');home.id='welcome';home.className='entry-page';
@@ -56,14 +57,26 @@ for(const [from,to] of [['choiceLanguage','language'],['choiceContrast','contras
 }
 // Los roles solo se eligen en la bienvenida; no hay atajos de rol en otras vistas.
 window.triageNavigate=render;
-const draftButton=document.createElement('button');draftButton.type='button';draftButton.id='draftDoctor';draftButton.textContent='Generar propuesta de evaluación con IA';
-const draftStatus=document.createElement('p');draftStatus.id='draftStatus';draftStatus.className='helper';draftStatus.textContent='La IA propone hipótesis y exámenes posibles. El profesional debe verificar, editar y aprobar antes de enviar.';
-get('message').closest('label').before(draftButton,draftStatus);
-draftButton.onclick=async()=>{
+// Tarea 1 (Lec-LAB 11): borrador de respuesta al paciente con personalidad graduable.
+// Solo rellena el texto; el registro exige la confirmación explícita de app.js.
+const replyBox=document.createElement('div');replyBox.className='reply-draft-box';
+const replyPanel=mountPersonalityPanel(replyBox,{title:'Borrador de respuesta con IA · personalidad',preset:'profesional',hint:'Propone cuidados generales no farmacológicos, signos de alarma y datos a confirmar, elegidos de un catálogo cerrado por zona. No diagnostica ni receta.'});
+const replyDraftButton=document.createElement('button');replyDraftButton.type='button';replyDraftButton.id='replyDraft';replyDraftButton.textContent='Generar borrador de respuesta';
+const replyDraftStatus=document.createElement('p');replyDraftStatus.id='replyDraftStatus';replyDraftStatus.className='helper';replyDraftStatus.setAttribute('role','status');
+replyBox.append(replyDraftButton,replyDraftStatus);
+get('message').closest('label').before(replyBox);
+replyDraftButton.onclick=async()=>{
  const code=window.currentDoctorCase?.code;
- if(!code){draftStatus.textContent='Selecciona primero un caso de la bandeja.';return}
- draftButton.disabled=true;draftStatus.textContent='Preparando borrador para revisión clínica…';
- try{const r=await fetch('/api/doctor/draft',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({code})});const data=await r.json();if(!r.ok)throw Error(data.error||'Error del servicio');get('message').value=data.draft;draftStatus.textContent=data.generated?'Borrador IA generado. Revísalo y corrígelo antes de enviarlo.':'Borrador básico: el modelo no está configurado o no respondió. Debes completar la evaluación clínica.'}
- catch(e){draftStatus.textContent='No se pudo preparar el borrador: '+e.message}finally{draftButton.disabled=false}
+ if(!code){replyDraftStatus.textContent='Selecciona primero un caso de la bandeja.';return}
+ replyDraftButton.disabled=true;replyDraftStatus.textContent='Redactando borrador…';
+ try{
+  const {personality,preset}=replyPanel.get();
+  const r=await fetch('/api/doctor/reply-draft',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({code,personality,preset})});
+  const data=await r.json();if(!r.ok)throw Error(data.error||'Error del servicio');
+  get('message').value=data.draft;get('message').dispatchEvent(new Event('input',{bubbles:true}));
+  const origin=data.generated?'IA remota ('+data.mode+')':'borrador local simulado';
+  replyDraftStatus.textContent='Borrador listo · '+origin+' · personalidad '+(data.preset==='personalizada'?'personalizada':data.preset)+'. Revísalo y edítalo; nada se registra hasta que confirmes el envío.'+(data.warning?' '+data.warning:'');
+ }catch(e){replyDraftStatus.textContent='No se pudo preparar el borrador: '+e.message}
+ finally{replyDraftButton.disabled=false}
 };
 render('welcome');

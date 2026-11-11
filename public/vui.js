@@ -1,6 +1,27 @@
 // Voz continua por turnos: VAD en navegador, transcripción servidor, intents/LLM y TTS.
 // Una única PWA y un único servidor HTTP. No hay transcripción de micrófono persistente.
+import {mountPersonalityPanel} from './personality-ui.js';
+import {PERSONALITY_PRESETS,normalizePersonality} from './personality.js';
 const el=id=>document.getElementById(id);
+// Tarea 1 (Lec-LAB 11): personalidad graduable del asistente del paciente.
+let storedPersonality=null;
+try{storedPersonality=JSON.parse(localStorage.getItem('triagevoz_personalidad')||'null')}catch{}
+const personaPanel=mountPersonalityPanel(document.createElement('div'),{
+  title:'Personalidad del asistente',
+  hint:'Cambia el tono del asistente: saludo, trato de tú o usted, ejemplos y frases de apoyo. Nunca cambia las reglas de seguridad.',
+  initial:storedPersonality,preset:el('persona').value,
+  onChange:({personality,preset})=>{
+    el('persona').value=preset;
+    try{localStorage.setItem('triagevoz_personalidad',JSON.stringify(personality))}catch{}
+    el('persona').dispatchEvent(new Event('change',{bubbles:true}));
+  }
+});
+document.querySelector('.integrated-vui .vui-heading').after(personaPanel.element);
+el('persona').value=personaPanel.get().preset;
+el('persona').addEventListener('change',e=>{if(e.isTrusted&&PERSONALITY_PRESETS[el('persona').value])personaPanel.set(PERSONALITY_PRESETS[el('persona').value])});
+window.triagePersonality=()=>personaPanel.get();
+window.triageSetPersonality=(p,preset)=>{personaPanel.set(normalizePersonality(p,preset),{silent:true});el('persona').value=personaPanel.get().preset};
+function personalityPayload(){const {personality,preset}=personaPanel.get();return {persona:preset,personality}}
 let session='',slots={},busy=false,voiceEnabled=false,micStream=null,ctx=null,recorder=null,monitor=null,source=null,playing=null;
 const messages=el('vuiMessages');
 // Avatar fotográfico: animación activada durante la reproducción real de la voz.
@@ -52,7 +73,7 @@ function notice(s){el('vuiNotice').textContent=s}
 async function post(url,body){const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw Error(data.error||'No se pudo completar la solicitud');return data}
 function append(role,text){messages.querySelector('.vui-empty')?.remove();const div=document.createElement('div');div.className='vui-bubble '+(role==='patient'?'from-patient':'from-assistant');const small=document.createElement('small');small.textContent=role==='patient'?'Tú':'TriageVoz';const p=document.createElement('p');p.textContent=text;div.append(small,p);messages.append(div);messages.scrollTop=messages.scrollHeight}
 function lang(){return el('language').value==='qu'?'qu':'es'}
-function persona(){return el('persona').value}
+function speechRate(){const p=personaPanel.get().personality.paciencia;return p>=7?0.89:p>=4?0.97:1.07}
 function renderResult(data){session=data.session;slots=data.slots||{};window.triageVoiceVisualUpdate(slots);append('assistant',data.reply);el('vuiProgress').textContent=`Pregunta ${Math.min(data.index+1,4)} de 4 · ${data.mode}`;voiceFinish.hidden=!data.caseCode;if(data.caseCode){voiceReceipt.hidden=false;voiceReceipt.replaceChildren();const label=document.createElement('p');label.textContent='Caso registrado. Guarda este código para consultar la respuesta médica:';const strong=document.createElement('strong');strong.textContent=data.caseCode;const copy=document.createElement('button');copy.type='button';copy.textContent='Copiar código';copy.onclick=()=>navigator.clipboard?.writeText(data.caseCode);const review=document.createElement('button');review.type='button';review.textContent='Consultar mi caso';review.onclick=()=>window.triageNavigate?.('review',data.caseCode);voiceReceipt.append(label,strong,copy,review);notice('Tu entrevista fue confirmada y guardada. La IA te comunica el código en voz si está activada.');disableVoiceAfterReply=true;}else if(data.route==='confirmacion')notice('No se pudo verificar el registro; intenta nuevamente.');if(data.ended){voiceEnabled=false;el('vuiMic').textContent='🎙 Activar voz';status('Entrevista detenida')}else status('Esperando respuesta')}
 let disableVoiceAfterReply=false;
 async function start(){
@@ -60,13 +81,13 @@ async function start(){
   voiceFinish.hidden=true;
   voiceReceipt.hidden=true;disableVoiceAfterReply=false;
   voiceRegion='';paintBody();
-  try{const data=await post('/api/assistant/start',{lang:lang(),persona:persona()});renderResult(data);el('vuiMic').disabled=false;el('vuiSend').disabled=false;await speak(data.reply)}
+  try{const data=await post('/api/assistant/start',{lang:lang(),...personalityPayload()});renderResult(data);el('vuiMic').disabled=false;el('vuiSend').disabled=false;await speak(data.reply)}
   catch(e){status('Error');notice(e.message)}finally{busy=false}
 }
 async function send(value){
   const text=String(value||'').trim();if(!text||busy||!session)return;
   busy=true;stopRecording();el('vuiSend').disabled=true;append('patient',text);el('vuiInput').value='';status('Procesando');
-  try{const data=await post('/api/assistant/reply',{session,text,lang:lang(),persona:persona(),provider:el('vuiProvider').value,consent:true,region:voiceRegion});renderResult(data);await speak(data.reply);if(disableVoiceAfterReply){disableVoice();disableVoiceAfterReply=false}}
+  try{const data=await post('/api/assistant/reply',{session,text,lang:lang(),...personalityPayload(),provider:el('vuiProvider').value,consent:true,region:voiceRegion});renderResult(data);await speak(data.reply);if(disableVoiceAfterReply){disableVoice();disableVoiceAfterReply=false}}
   catch(e){notice(e.message);status('Error')}
   finally{busy=false;el('vuiSend').disabled=false;if(voiceEnabled)listen()}
 }
@@ -84,7 +105,7 @@ async function speak(text){
     return;
   }
   if(!('speechSynthesis'in window)){notice('El navegador no ofrece lectura por voz.');return}
-  await new Promise(resolve=>{const utterance=new SpeechSynthesisUtterance(text);utterance.lang='es-PE';utterance.rate=persona()==='breve'?1.07:0.89;utterance.onstart=()=>setAvatarState('speaking');utterance.onend=resolve;utterance.onerror=resolve;speechSynthesis.cancel();speechSynthesis.speak(utterance);setTimeout(resolve,22000)});
+  await new Promise(resolve=>{const utterance=new SpeechSynthesisUtterance(text);utterance.lang='es-PE';utterance.rate=speechRate();utterance.onstart=()=>setAvatarState('speaking');utterance.onend=resolve;utterance.onerror=resolve;speechSynthesis.cancel();speechSynthesis.speak(utterance);setTimeout(resolve,22000)});
   setAvatarState('idle');
 }
 function stopRecording(){

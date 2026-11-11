@@ -1,7 +1,19 @@
-import {test} from 'node:test';
+import {test,after} from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import {handler} from '../server.mjs';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import crypto from 'node:crypto';
+// Aísla las pruebas: nunca deben escribir data/runtime.json ni data/profiles.json reales.
+const tmp=path.join(os.tmpdir(),'triagevoz-perfil-'+crypto.randomUUID());
+process.env.STORAGE_FILE=tmp+'.json';
+process.env.PROFILES_FILE=tmp+'-profiles.json';
+const {handler}=await import('../server.mjs');
+after(async()=>{
+  await fs.rm(process.env.STORAGE_FILE,{force:true});
+  await fs.rm(process.env.PROFILES_FILE,{force:true});
+});
 
 test('PC3: perfil persistente y aislado por identificador ficticio',async()=>{
   const server=http.createServer(handler);

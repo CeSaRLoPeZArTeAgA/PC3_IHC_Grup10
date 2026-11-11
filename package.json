@@ -6,6 +6,7 @@
   "description": "Prototipo académico PWA multimodal pre-triaje rural",
   "scripts": {
     "start": "node server.mjs",
+    "prompt": "node tools/prompt.mjs",
     "test": "node --test tests/*.test.mjs"
   },
   "engines": {

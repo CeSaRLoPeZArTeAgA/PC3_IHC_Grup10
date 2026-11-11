@@ -1,5 +1,7 @@
 # TriageVoz Rural PC3 — Aplicación unificada
 
+> **Integrantes, Grupo 10 — CC451:** Santa Cruz Basilio, Jesus Diego · López Arteaga, César Omar · Pumayauli Evangelista, Bryan José. Universidad Nacional de Ingeniería · CC451 · 2026-II.
+
 Proyecto académico UNI CC451, Grupo 10. Se conserva la interfaz corporal, el flujo paciente–médico y la PWA de PC2; se integra el motor de intents y personalidad adaptativa del Lab11 dentro de **una sola interfaz**. El diseño conversacional toma como referencia la estructura centrada en voz de VaaniCare, sin copiar su código.
 
 ## Inicio manual en Windows
@@ -26,11 +28,17 @@ Abre **http://127.0.0.1:4173**. También puedes iniciar con `INICIAR_PC3.bat`. *
 4. Para voz, pulsa **Activar voz una sola vez** y acepta el permiso. El navegador detecta turnos mediante nivel de audio, envía el fragmento y el asistente intenta responder por voz. También puedes escribir si el entorno es ruidoso o una API falla.
 5. Al finalizar las cuatro preguntas de voz, el asistente muestra el resumen y pregunta si es correcto. Responde **sí, confirmo** para registrar automáticamente el caso en el servidor. Aparece el código **SALA-XXXXXXXXXXXX** y el asistente lo lee si está activada la voz. También se puede transferir la información al formulario sin registrarla todavía.
 6. Desde la bienvenida pulsa **Revisión de diagnóstico · Consultar mi caso**, ingresa el código y consulta si está **en espera de evaluación** o si hay una **respuesta profesional** disponible.
-7. El personal de salud abre cada caso, confirma la recepción y puede pulsar **Generar propuesta de evaluación con IA**. El sistema coloca un borrador de hipótesis y posibles evaluaciones/exámenes en **Respuesta profesional simulada**. El médico debe leerlo, corregirlo y pulsar **Enviar respuesta**: nunca se envía automáticamente.
+7. El personal de salud abre cada caso, confirma la recepción, elige la personalidad (Técnico, Profesional o Acompañante) y pulsa **Generar borrador de respuesta**. El sistema coloca en **Respuesta profesional simulada** un mensaje para el paciente con cuidados generales no farmacológicos, signos de alarma y datos a confirmar, tomados de un catálogo cerrado por zona; no diagnostica ni receta. El médico lo revisa, lo edita y pulsa **Enviar respuesta**, que pide confirmar antes de registrar: nunca se envía automáticamente.
 
 Al confirmar el resumen de voz, el caso queda guardado antes de ofrecer **Culminar triaje**, que vuelve a la pantalla inicial. En el formulario, el mismo botón aparece después del envío. Los casos ficticios se almacenan en `data/runtime.json` y se mantienen al reiniciar el servidor.
 
 La interfaz incluye un modo de **alto contraste** para las pantallas de inicio, selección, voz, silueta y bandeja, con contraste explícito en las burbujas del paciente y del asistente.
+
+## Personalidad graduable (Tarea 1 · Lec-LAB 11)
+
+- En la pantalla de voz, el panel **Personalidad del asistente** ofrece tres presets (**Técnico**, **Profesional**, **Acompañante**) y seis rasgos 0–10 en «Ajustar los rasgos». El cambio se aplica desde el siguiente turno sin perder lo declarado y se guarda en el perfil.
+- En la bandeja médica, **Generar borrador de respuesta** redacta una respuesta para el paciente con la personalidad elegida y un catálogo cerrado de cuidados y signos de alarma por zona. **Enviar respuesta** pide confirmar («¿Registrar esta respuesta?») antes de guardar.
+- `npm run prompt` imprime el prompt y un diálogo de ejemplo. Detalle completo: `docs_pc3/03-tarea1-personalidades-PC3.md`.
 
 ## Modelo híbrido
 
@@ -50,6 +58,6 @@ El directorio `voice-engine/` conserva las fuentes y pruebas de Lab11 para consu
 
 ## Seguridad y límites
 
-Aplicación académica con **datos ficticios exclusivamente**. No hay autenticación médica ni validación clínica, y no sustituye un profesional. La IA genera únicamente hipótesis orientativas para revisión profesional, nunca diagnósticos definitivos. El código de caso sirve como identificador, **no como mecanismo seguro de acceso**; no introduzcas información clínica real. El reconocimiento de quechua exige pruebas con personas quechuahablantes antes de cualquier evaluación real. En una urgencia, contactar servicios de emergencia.
+Aplicación académica con **datos ficticios exclusivamente**. No hay autenticación médica ni validación clínica, y no sustituye un profesional. La IA no emite diagnósticos, hipótesis diagnósticas, recetas ni clasificación de urgencia; solo organiza el relato y propone borradores que una persona revisa. El código de caso sirve como identificador, **no como mecanismo seguro de acceso**; no introduzcas información clínica real. El reconocimiento de quechua exige pruebas con personas quechuahablantes antes de cualquier evaluación real. En una urgencia, contactar servicios de emergencia.
 
 Documentación PC2: `docs_pc2/`. Entrega e informe PC3, flujo de trabajo y aportes en Word: `docs_pc3/`. Licencia MIT.

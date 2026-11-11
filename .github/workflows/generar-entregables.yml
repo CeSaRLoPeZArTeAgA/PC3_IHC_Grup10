@@ -7,7 +7,7 @@ on:
       - 'scripts/generar_anexo.py'
       - 'assets/c4.dot'
       - 'assets/flujo.dot'
-      - 'docs/14-anexo-version-actual.md'
+      - 'docs_pc2/14-anexo-version-actual.md'
       - '.github/workflows/generar-entregables.yml'
   workflow_dispatch:
 permissions:
@@ -40,8 +40,8 @@ jobs:
           dot -Tpng assets/flujo.dot -o assets/flujo.png
       - name: Exportar PDF
         run: |
-          libreoffice -env:UserInstallation=file:///tmp/pc2lo_revision --headless --convert-to pdf --outdir docs docs/14-anexo-version-actual.docx
-          libreoffice -env:UserInstallation=file:///tmp/pc2lo_revision --headless --convert-to pdf --outdir docs docs/01-informe-PC2.docx
+          libreoffice -env:UserInstallation=file:///tmp/pc2lo_revision --headless --convert-to pdf --outdir docs_pc2 docs_pc2/14-anexo-version-actual.docx
+          libreoffice -env:UserInstallation=file:///tmp/pc2lo_revision --headless --convert-to pdf --outdir docs_pc2 docs_pc2/01-informe-PC2.docx
           libreoffice -env:UserInstallation=file:///tmp/pc2lo_revision --headless --convert-to pdf --outdir presentacion presentacion/PC2-TriageVoz-Rural-Grupo10.pptx
       - name: Validar documentos y diapositivas generadas
         run: |
@@ -49,10 +49,10 @@ jobs:
           from pathlib import Path
           from zipfile import ZipFile
           from docx import Document
-          doc=Path('docs/14-anexo-version-actual.docx')
-          report=Path('docs/01-informe-PC2.docx')
-          reportpdf=Path('docs/01-informe-PC2.pdf')
-          pdf=Path('docs/14-anexo-version-actual.pdf')
+          doc=Path('docs_pc2/14-anexo-version-actual.docx')
+          report=Path('docs_pc2/01-informe-PC2.docx')
+          reportpdf=Path('docs_pc2/01-informe-PC2.pdf')
+          pdf=Path('docs_pc2/14-anexo-version-actual.pdf')
           ppt=Path('presentacion/PC2-TriageVoz-Rural-Grupo10.pptx')
           pptpdf=Path('presentacion/PC2-TriageVoz-Rural-Grupo10.pdf')
           for f in (doc,pdf,report,reportpdf,ppt,pptpdf,Path('assets/c4.png'),Path('assets/flujo.png')):
@@ -71,7 +71,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/01-informe-PC2.docx docs/01-informe-PC2.pdf docs/14-anexo-version-actual.docx docs/14-anexo-version-actual.pdf presentacion/PC2-TriageVoz-Rural-Grupo10.pptx presentacion/PC2-TriageVoz-Rural-Grupo10.pdf assets/c4.png assets/flujo.png
+          git add docs_pc2/01-informe-PC2.docx docs_pc2/01-informe-PC2.pdf docs_pc2/14-anexo-version-actual.docx docs_pc2/14-anexo-version-actual.pdf presentacion/PC2-TriageVoz-Rural-Grupo10.pptx presentacion/PC2-TriageVoz-Rural-Grupo10.pdf assets/c4.png assets/flujo.png
           if ! git diff --cached --quiet; then
             git commit -m "build(docs): publicar anexo Word PDF, diagramas actualizados y presentación PC2"
             git push

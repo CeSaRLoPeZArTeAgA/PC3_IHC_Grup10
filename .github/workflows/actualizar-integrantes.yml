@@ -29,7 +29,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add README.md docs/ mi-aporte-* presentacion/ scripts/generar_presentacion.cjs
+          git add README.md docs_pc2/ docs_pc3/ presentacion/ scripts/generar_presentacion.cjs
           if ! git diff --cached --quiet; then
             git commit -m "docs: regenerar entregables PC2 con roster oficial"
             git push

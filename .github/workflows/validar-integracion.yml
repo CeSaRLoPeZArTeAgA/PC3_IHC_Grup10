@@ -1,4 +1,4 @@
-name: Validar integración PC2
+name: Validar integración PC3
 on:
   push:
     branches: [rama1, main, 'revision-pc2-*']
@@ -18,7 +18,11 @@ jobs:
       - name: Verificar sintaxis JavaScript
         run: |
           node --check server.mjs
+          node --check assistant.mjs
+          node --check gemini-api.mjs
           node --check public/app.js
+          node --check public/vui.js
+          node --check public/navigation.js
           node --check tests/app.test.mjs
       - name: Ejecutar pruebas
         run: npm test
