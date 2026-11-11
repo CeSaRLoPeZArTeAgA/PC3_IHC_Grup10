@@ -36,7 +36,7 @@ if(!cases.length){
     }
   }catch{}
 }
-const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.json':'application/json','.webmanifest':'application/manifest+json'};
+const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.json':'application/json','.webmanifest':'application/manifest+json'};
 const str=(s,n=700)=>String(s??'').trim().slice(0,n);
 const send=(res,status,obj)=>{res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});res.end(JSON.stringify(obj));};
 async function read(req){let s='';for await(const chunk of req){s+=chunk;if(s.length>120000)throw Error('too large');}try{return JSON.parse(s||'{}')}catch{throw Error('invalid JSON')}}
