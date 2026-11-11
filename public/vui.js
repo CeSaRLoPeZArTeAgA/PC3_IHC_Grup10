@@ -3,6 +3,12 @@
 const el=id=>document.getElementById(id);
 let session='',slots={},busy=false,voiceEnabled=false,micStream=null,ctx=null,recorder=null,monitor=null,source=null,playing=null;
 const messages=el('vuiMessages');
+// Avatar vectorial local: movimiento de boca sincronizado con el estado real de reproducción.
+const avatar=document.createElement('div');avatar.className='doctor-avatar';avatar.dataset.state='idle';
+avatar.setAttribute('aria-label','Avatar de la asistente médica virtual');
+avatar.innerHTML=`<div class="doctor-avatar-art" aria-hidden="true"><svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg"><circle cx="75" cy="75" r="70" fill="#dff3f5"/><path d="M25 137 Q31 102 59 100 L91 100 Q119 102 125 137Z" fill="#fff" stroke="#36758b" stroke-width="2"/><path d="M61 98L75 119L89 98" fill="#f1b88d"/><path d="M65 108L75 122L85 108L81 137L69 137Z" fill="#11788c"/><path d="M50 111L41 137M100 111L109 137" stroke="#98bfca" stroke-width="3" fill="none"/><path d="M101 114 Q118 124 104 135 Q91 141 83 125" fill="none" stroke="#376579" stroke-width="3"/><circle cx="83" cy="125" r="5" fill="#e4edf1" stroke="#376579" stroke-width="2"/><ellipse cx="75" cy="67" rx="36" ry="40" fill="#f3c69e"/><path d="M39 63Q34 21 75 24Q115 20 112 66Q104 53 94 43Q67 57 40 52Z" fill="#263f53"/><path d="M50 71Q57 66 64 71M86 71Q93 66 100 71" stroke="#263f53" stroke-width="3" stroke-linecap="round" fill="none"/><circle cx="58" cy="72" r="2" fill="#263f53"/><circle cx="92" cy="72" r="2" fill="#263f53"/><path d="M74 75L70 87L77 88" stroke="#bf8a6d" stroke-width="2" fill="none" stroke-linecap="round"/><ellipse class="doctor-avatar-mouth" cx="76" cy="95" rx="9" ry="2.5" fill="#914b53"/><path d="M43 28H106" stroke="#fff" stroke-width="8"/><path d="M44 28Q75 13 106 28" fill="none" stroke="#e5f3f4" stroke-width="5"/><rect x="69" y="17" width="13" height="21" rx="2" fill="#fff"/><rect x="65" y="21" width="21" height="13" rx="2" fill="#fff"/><path d="M72 20V35M66 27H85" stroke="#15859a" stroke-width="3"/></svg></div><div class="doctor-avatar-copy"><strong>Dra. TriageVoz</strong><span>Asistente médica virtual</span><span class="doctor-avatar-state" aria-live="polite">En espera</span><div class="doctor-avatar-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div>`;
+document.querySelector('.integrated-vui .vui-heading').after(avatar);
+function setAvatarState(state){avatar.dataset.state=state;avatar.querySelector('.doctor-avatar-state').textContent=({idle:'En espera',listening:'Te escucho',thinking:'Preparando respuesta',speaking:'Hablando'})[state]||'En espera'}
 const voiceFinish=document.createElement('button');voiceFinish.type='button';voiceFinish.className='vui-finish';voiceFinish.textContent='Culminar triaje';voiceFinish.hidden=true;
 document.querySelector('.integrated-vui').append(voiceFinish);
 voiceFinish.onclick=()=>{disableVoice();window.triageNavigate?.('welcome')};
@@ -44,7 +50,7 @@ document.body.classList.add('form-hidden');
 const manual=document.createElement('button');manual.type='button';manual.className='vui-manual';manual.textContent='Usar formulario y silueta corporal';
 manual.onclick=()=>{document.body.classList.remove('form-hidden');window.triageNavigate?.('form');el('p0').scrollIntoView({behavior:'smooth',block:'start'})};
 document.querySelector('.integrated-vui').append(manual);
-function status(s){el('vuiStatus').textContent=s}
+function status(s){el('vuiStatus').textContent=s;if(s==='Escuchando')setAvatarState('listening');else if(['Procesando','Transcribiendo','Iniciando'].includes(s))setAvatarState('thinking');else if(s!=='Respondiendo por voz')setAvatarState('idle')}
 function notice(s){el('vuiNotice').textContent=s}
 async function post(url,body){const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const data=await r.json();if(!r.ok)throw Error(data.error||'No se pudo completar la solicitud');return data}
 function append(role,text){messages.querySelector('.vui-empty')?.remove();const div=document.createElement('div');div.className='vui-bubble '+(role==='patient'?'from-patient':'from-assistant');const small=document.createElement('small');small.textContent=role==='patient'?'Tú':'TriageVoz';const p=document.createElement('p');p.textContent=text;div.append(small,p);messages.append(div);messages.scrollTop=messages.scrollHeight}
@@ -74,14 +80,15 @@ async function speak(text){
     try{
       const data=await post('/api/assistant/speak',{text});
       if(data.error)throw Error(data.error);
-      await new Promise((resolve,reject)=>{const audio=new Audio('data:audio/wav;base64,'+data.audio);playing=audio;audio.onended=resolve;audio.onerror=()=>reject(Error('Audio no reproducible'));audio.play().catch(reject)});
+      await new Promise((resolve,reject)=>{const audio=new Audio('data:audio/wav;base64,'+data.audio);playing=audio;audio.onplaying=()=>setAvatarState('speaking');audio.onended=resolve;audio.onerror=()=>reject(Error('Audio no reproducible'));audio.play().catch(reject)});
       notice('Voz quechua experimental: comprueba la pronunciación con una persona quechuahablante.');
     }catch(e){notice('La voz quechua no está disponible: '+e.message+' Puedes continuar por texto.');}
-    finally{playing=null}
+    finally{playing=null;setAvatarState(voiceEnabled?'listening':'idle')}
     return;
   }
   if(!('speechSynthesis'in window)){notice('El navegador no ofrece lectura por voz.');return}
-  await new Promise(resolve=>{const utterance=new SpeechSynthesisUtterance(text);utterance.lang='es-PE';utterance.rate=persona()==='breve'?1.07:0.89;utterance.onend=resolve;utterance.onerror=resolve;speechSynthesis.cancel();speechSynthesis.speak(utterance);setTimeout(resolve,22000)});
+  await new Promise(resolve=>{const utterance=new SpeechSynthesisUtterance(text);utterance.lang='es-PE';utterance.rate=persona()==='breve'?1.07:0.89;utterance.onstart=()=>setAvatarState('speaking');utterance.onend=resolve;utterance.onerror=resolve;speechSynthesis.cancel();speechSynthesis.speak(utterance);setTimeout(resolve,22000)});
+  setAvatarState('idle');
 }
 function stopRecording(){
   if(monitor)cancelAnimationFrame(monitor);monitor=null;
@@ -97,7 +104,7 @@ async function enableVoice(){
     if(!busy)listen();
   }catch(e){voiceEnabled=false;notice('No se pudo activar el micrófono: '+e.message)}
 }
-function disableVoice(){voiceEnabled=false;stopRecording();playing?.pause();window.speechSynthesis?.cancel();micStream?.getTracks().forEach(t=>t.stop());micStream=null;ctx?.close();ctx=null;el('vuiMic').textContent='🎙 Activar voz';status('Modo texto')}
+function disableVoice(){voiceEnabled=false;stopRecording();playing?.pause();window.speechSynthesis?.cancel();micStream?.getTracks().forEach(t=>t.stop());micStream=null;ctx?.close();ctx=null;el('vuiMic').textContent='🎙 Activar voz';status('Modo texto');setAvatarState('idle')}
 function listen(){
  if(!voiceEnabled||busy||!micStream||recorder?.state==='recording')return;
  const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(t=>MediaRecorder.isTypeSupported(t))||'';

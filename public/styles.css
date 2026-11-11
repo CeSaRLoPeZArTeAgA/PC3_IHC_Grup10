@@ -57,6 +57,27 @@ body.high .room-badge.recibido{background:#0d3a17;color:#a3e9b1;border-color:#1c
 @media(max-width:700px){#voiceFrame{min-height:770px}.voice-toolbar{flex-direction:column}}
 .integrated-vui{margin:20px 0 26px;padding:20px;border:1px solid #bddbe0;background:#f8fcfd;border-radius:16px}
 .vui-heading{display:flex;justify-content:space-between;align-items:start;gap:12px}
+.doctor-avatar{display:flex;align-items:center;gap:14px;padding:10px 14px;margin:4px 0 16px;border:1px solid #b9dbe3;border-radius:14px;background:#edf9fa;max-width:100%}
+.doctor-avatar-art{width:108px;height:108px;flex:0 0 108px}
+.doctor-avatar-art svg{width:100%;height:100%;display:block}
+.doctor-avatar-copy{display:flex;flex-direction:column;gap:1px;min-width:0;color:#0c4255}
+.doctor-avatar-copy strong{font-size:1.08rem}
+.doctor-avatar-copy>span:nth-child(2){font-size:.82rem;color:#416577}
+.doctor-avatar-state{font-size:.9rem;font-weight:700;color:#075e75;padding-top:4px}
+.doctor-avatar-bars{display:flex;align-items:flex-end;gap:4px;height:21px;margin-top:3px}
+.doctor-avatar-bars i{display:block;width:5px;height:5px;border-radius:3px;background:#1689a0}
+.doctor-avatar[data-state="speaking"] .doctor-avatar-mouth{transform-box:fill-box;transform-origin:center;animation:doctorTalk .23s ease-in-out infinite alternate}
+.doctor-avatar[data-state="speaking"] .doctor-avatar-bars i{animation:doctorBar .5s ease-in-out infinite alternate}
+.doctor-avatar[data-state="speaking"] .doctor-avatar-bars i:nth-child(2){animation-delay:.17s}
+.doctor-avatar[data-state="speaking"] .doctor-avatar-bars i:nth-child(3){animation-delay:.33s}
+.doctor-avatar[data-state="speaking"] .doctor-avatar-bars i:nth-child(4){animation-delay:.1s}
+.doctor-avatar[data-state="listening"]{border-color:#007b8d;box-shadow:inset 0 0 0 1px #007b8d}
+@keyframes doctorTalk{from{transform:scaleY(1)}to{transform:scaleY(4.5)}}
+@keyframes doctorBar{from{height:5px}to{height:20px}}
+@media(max-width:550px){.doctor-avatar{gap:8px;padding:8px}.doctor-avatar-art{width:82px;height:82px;flex-basis:82px}}
+@media(prefers-reduced-motion:reduce){.doctor-avatar[data-state="speaking"] .doctor-avatar-mouth,.doctor-avatar[data-state="speaking"] .doctor-avatar-bars i{animation:none}.doctor-avatar[data-state="speaking"] .doctor-avatar-bars i{height:14px}}
+body.high .doctor-avatar{background:#181818!important;border-color:#fff!important}
+body.high .doctor-avatar-copy,body.high .doctor-avatar-copy>span{color:#fff!important}
 .vui-heading h2{margin:6px 0;font-size:1.35rem;color:#153b4a}
 .vui-heading p{margin:3px 0 12px;color:#526a72}
 .vui-status{font-size:.78rem;background:#e0f2f2;color:#056077;padding:7px 12px;border-radius:20px;white-space:nowrap}
