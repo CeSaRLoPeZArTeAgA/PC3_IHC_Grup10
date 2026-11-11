@@ -1,4 +1,4 @@
-const cache='triagevoz-pc3-v7';
+const cache='triagevoz-pc3-v8';
 const assets=['/','/index.html','/app.js','/vui.js','/navigation.js','/styles.css','/doctor-avatar.jpg','/icon.svg','/manifest.webmanifest'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(cache).then(store=>store.addAll(assets)));
