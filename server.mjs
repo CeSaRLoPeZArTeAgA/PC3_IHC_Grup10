@@ -6,16 +6,24 @@ import { fileURLToPath } from 'node:url';
 import {newSession,replyTo,confirmedSession} from './assistant.mjs';
 import {normalizePersonality,presetKey,matchPreset,buildCaseReplyPrompt,localCaseReply} from './public/personality.js';
 import {listGeminiModels,transcribeQuechua} from './gemini-api.mjs';
+import {createSqliteStore} from './db/sqlite-store.mjs';
 const root=path.dirname(fileURLToPath(import.meta.url));
 // Claves exclusivamente del servidor; el navegador nunca recibe secretos.
 try{process.loadEnvFile?.(path.join(root,'.env'))}catch{}
 const pub=path.join(root,'public');
 const storage=process.env.STORAGE_FILE||path.join(root,'data','runtime.json');
 const profilesFile=process.env.PROFILES_FILE||path.join(root,'data','profiles.json');
-let profiles={};
-try{const p=JSON.parse(await fs.readFile(profilesFile,'utf8'));if(p&&typeof p==='object'&&!Array.isArray(p))profiles=p;}catch{}
-let cases=[];
-try{const r=JSON.parse(await fs.readFile(storage,'utf8'));if(Array.isArray(r))cases=r;}catch{}
+// SQLite por defecto. Las pruebas legadas que definen STORAGE_FILE/PROFILES_FILE siguen en JSON.
+// Para migrar, deja ambas variables comentadas en .env. Nunca importes claves ni datos reales.
+const sqliteEnabled=!process.env.STORAGE_FILE&&!process.env.PROFILES_FILE;
+const sqliteStore=sqliteEnabled?await createSqliteStore({
+ dbFile:path.resolve(root,process.env.SQLITE_FILE||'data/triagevoz.db'),
+ legacyCasesFile:storage,legacyProfilesFile:profilesFile
+}):null;
+let profiles=sqliteStore?sqliteStore.readProfiles():{};
+if(!sqliteStore)try{const p=JSON.parse(await fs.readFile(profilesFile,'utf8'));if(p&&typeof p==='object'&&!Array.isArray(p))profiles=p;}catch{}
+let cases=sqliteStore?sqliteStore.readCases():[];
+if(!sqliteStore)try{const r=JSON.parse(await fs.readFile(storage,'utf8'));if(Array.isArray(r))cases=r;}catch{}
 if(!cases.length){
   try{
     const sample=JSON.parse(await fs.readFile(path.join(root,'data','casos-ficticios.json'),'utf8'));
@@ -37,6 +45,8 @@ if(!cases.length){
     }
   }catch{}
 }
+// Si el catálogo ficticio inicial se cargó, también persistirlo en SQLite.
+if(sqliteStore&&cases.length)sqliteStore.saveCases(cases);
 const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.json':'application/json','.webmanifest':'application/manifest+json'};
 const str=(s,n=700)=>String(s??'').trim().slice(0,n);
 const send=(res,status,obj)=>{res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});res.end(JSON.stringify(obj));};
@@ -66,6 +76,7 @@ async function speakQuechua(b){
 // Las solicitudes simultáneas deben persistirse en orden; cada una captura su versión.
 let pendingSave=Promise.resolve();
 function save(){
+  if(sqliteStore){sqliteStore.saveCases(cases);return Promise.resolve();}
   const snapshot=JSON.stringify(cases,null,2);
   const next=pendingSave.catch(()=>{}).then(async()=>{
     await fs.mkdir(path.dirname(storage),{recursive:true});
@@ -107,7 +118,16 @@ async function caseReplyDraft(c,raw){
    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':process.env.GEMINI_API_KEY},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts:[{text:instruction}]}],generationConfig:{temperature:0.5,maxOutputTokens:450}}),signal:AbortSignal.timeout(18000)});
    if(!r.ok)throw Error('Modelo no disponible');const j=await r.json();text=str(j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join(''),1200);mode='gemini';
   }
-  return text?{...base,draft:text,generated:true,mode}:fallback;
+  // Advertencia obligatoria, independiente de la salida del LLM.
+if (text) {
+  const aviso = 'No se emite diagnóstico ni receta.';
+
+  if (!text.includes(aviso)) {
+    text = `${text.trim()}\n\n${aviso}`;
+  }
+}
+
+return text?{...base,draft:text,generated:true,mode}:fallback;
  }catch{return {...fallback,warning:'Servicio de IA no disponible; se usó el borrador local con la misma personalidad.'}}
 }
 async function handler(req,res){const u=new URL(req.url||'/', 'http://localhost');try{
@@ -145,12 +165,15 @@ if(u.pathname==='/api/profiles'&&req.method==='PUT'){
   const p=b.profile||{};
   const allowed={language:str(p.language,8),contrast:!!p.contrast,large:!!p.large,speak:!!p.speak,rhythm:p.rhythm==='pausado'?'pausado':'normal',errorCount:Math.min(999,Math.max(0,Number(p.errorCount)||0)),avgTimePerQuestion:Math.min(999,Math.max(0,Number(p.avgTimePerQuestion)||0)),persona:presetKey(p.persona),personality:normalizePersonality(p.personality,p.persona),updatedAt:new Date().toISOString()};
   profiles[id]=allowed;
-  await fs.mkdir(path.dirname(profilesFile),{recursive:true});
-  const temp=profilesFile+'.'+crypto.randomUUID()+'.tmp';
-  await fs.writeFile(temp,JSON.stringify(profiles,null,2),{mode:0o600});await fs.rename(temp,profilesFile);
+  if(sqliteStore){sqliteStore.saveProfile(id,allowed);}
+  else{
+   await fs.mkdir(path.dirname(profilesFile),{recursive:true});
+   const temp=profilesFile+'.'+crypto.randomUUID()+'.tmp';
+   await fs.writeFile(temp,JSON.stringify(profiles,null,2),{mode:0o600});await fs.rename(temp,profilesFile);
+  }
   return send(res,200,{id,profile:allowed});
 }
-if(req.method==='GET'&&u.pathname==='/api/health')return send(res,200,{ok:true,cases:cases.length,model:process.env.GEMINI_API_KEY?'remoto-configurado':'simulacion'});
+if(req.method==='GET'&&u.pathname==='/api/health')return send(res,200,{ok:true,cases:cases.length,model:process.env.GEMINI_API_KEY?'remoto-configurado':'simulacion',storage:sqliteStore?'sqlite':'json'});
 if(req.method==='GET'&&u.pathname==='/api/rooms')return send(res,200,cases.slice(-12).reverse().map(c=>({code:c.code,alias:c.alias,region:c.region||'Zona general',motivo:c.answers?.motivo||'Pre-triaje general',status:c.status,createdAt:c.createdAt,repliesCount:c.replies?.length||0,type:'caso-demo',realtime:false})));
 if(req.method==='POST'&&u.pathname==='/api/llm')return send(res,200,await summarize(await read(req)));
 if(req.method==='POST'&&u.pathname==='/api/cases'){const obj=clean(await read(req));if(!obj.region&&!obj.answers.motivo)return send(res,422,{error:'Indique la región o motivo'});const rec={id:crypto.randomUUID(),code:crypto.randomBytes(6).toString('hex').toUpperCase(),...obj,status:'enviado',createdAt:new Date().toISOString(),ackAt:null,replies:[]};cases.push(rec);await save();return send(res,201,rec);}

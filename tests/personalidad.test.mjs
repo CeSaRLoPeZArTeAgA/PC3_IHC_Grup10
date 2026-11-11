@@ -13,6 +13,10 @@ process.env.STORAGE_FILE=tmp+'.json';
 process.env.PROFILES_FILE=tmp+'-profiles.json';
 delete process.env.GROQ_API_KEY;delete process.env.GEMINI_API_KEY;
 const {handler}=await import('../server.mjs');
+// La importación del servidor vuelve a cargar .env.
+// Esta prueba debe ejecutarse sin proveedores LLM remotos.
+delete process.env.GROQ_API_KEY;
+delete process.env.GEMINI_API_KEY;
 after(async()=>{await fs.rm(process.env.STORAGE_FILE,{force:true});await fs.rm(process.env.PROFILES_FILE,{force:true})});
 
 const root=path.resolve(import.meta.dirname,'..');

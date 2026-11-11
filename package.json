@@ -7,10 +7,11 @@
   "scripts": {
     "start": "node server.mjs",
     "prompt": "node tools/prompt.mjs",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "db:check": "node scripts/inspeccionar-sqlite.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.13.0"
   },
   "license": "MIT"
 }

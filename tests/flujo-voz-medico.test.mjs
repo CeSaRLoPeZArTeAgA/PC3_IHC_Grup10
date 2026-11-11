@@ -10,6 +10,10 @@ const tmp=path.join(os.tmpdir(),'triagevoz-voz-'+crypto.randomUUID());
 process.env.STORAGE_FILE=tmp+'.json';
 process.env.PROFILES_FILE=tmp+'-profiles.json';
 const {handler}=await import('../server.mjs');
+// Desactivar proveedores remotos durante esta prueba.
+// El servidor carga .env cuando se importa.
+delete process.env.GROQ_API_KEY;
+delete process.env.GEMINI_API_KEY;
 after(async()=>{
   await fs.rm(process.env.STORAGE_FILE,{force:true});
   await fs.rm(process.env.PROFILES_FILE,{force:true});

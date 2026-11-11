@@ -7,3 +7,9 @@ data/runtime.json.tmp
 .DS_Store
 
 data/profiles.json
+data/*.db
+data/*.db-*
+data/*.sqlite
+data/*.sqlite-*
+server.mjs.pre-sqlite.bak
+server.mjs.sqlite.tmp
