@@ -24,9 +24,10 @@ function render(next,code=''){
  page=next;document.body.dataset.screen=next;
  home.hidden=next!=='welcome';choice.hidden=next!=='options';review.hidden=next!=='review';
  get('globalBack').hidden=next==='welcome';
+ // Navegación exclusiva: la consulta nunca comparte pantalla con la bandeja médica.
  get('patient').hidden=!['voice','form'].includes(next);
  get('doctor').hidden=next!=='doctor';
- if(next==='doctor')get('doctorTab').click();
+ if(next==='doctor')get('refreshRooms')?.click();
  if(next==='form')document.body.classList.remove('form-hidden');
  if(next==='voice')document.body.classList.add('form-hidden');
  if(next==='options')syncToChoice();
@@ -53,8 +54,7 @@ back.onclick=()=>render(['voice','form'].includes(page)?'options':'welcome');
 for(const [from,to] of [['choiceLanguage','language'],['choiceContrast','contrast'],['choiceLarge','large'],['choiceSpeak','speak']]){
  get(from).addEventListener('change',()=>{get(to)[from==='choiceLanguage'?'value':'checked']=get(from)[from==='choiceLanguage'?'value':'checked'];get(to).dispatchEvent(new Event('change',{bubbles:true}))});
 }
-// La interfaz médica mantiene su bandeja de casos y sus controles de acuse/respuesta.
-get('patientTab').onclick=()=>render('options');get('doctorTab').onclick=()=>{get('doctor').hidden=false;get('patient').hidden=true;get('doctorTab').classList.add('active');get('patientTab').classList.remove('active');const refresh=get('refreshRooms');refresh?.click()};
+// Los roles solo se eligen en la bienvenida; no hay atajos de rol en otras vistas.
 window.triageNavigate=render;
 const draftButton=document.createElement('button');draftButton.type='button';draftButton.id='draftDoctor';draftButton.textContent='Generar propuesta de evaluación con IA';
 const draftStatus=document.createElement('p');draftStatus.id='draftStatus';draftStatus.className='helper';draftStatus.textContent='La IA propone hipótesis y exámenes posibles. El profesional debe verificar, editar y aprobar antes de enviar.';

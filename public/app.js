@@ -151,7 +151,8 @@ function show(n){
 }
 function showTab(which){for(const id of ['patient','doctor']){$(id).hidden=id!==which;$(id+'Tab').classList.toggle('active',id===which)}if(which==='doctor')loadRooms()}
 function patientTab(active){showTab(active?'patient':'doctor')}
-$('patientTab').onclick=()=>showTab('patient');$('doctorTab').onclick=()=>showTab('doctor');
+// Los botones heredados se mantienen como referencias internas, sin navegación de roles.
+// navigation.js gestiona todas las pantallas exclusivamente desde la bienvenida.
 zones.forEach(z=>{const b=document.createElement('button');b.type='button';b.textContent=z;b.onclick=()=>{$('region').value=z;session.region=z;paintZone();msg('Seleccionaste '+z)};$('zones').append(b)});
 function paintZone(){
 const region=$('region').value.trim();

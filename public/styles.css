@@ -82,7 +82,7 @@ body.high .room-badge.recibido{background:#0d3a17;color:#a3e9b1;border-color:#1c
 .vui-manual{display:block;margin:7px auto 0;background:transparent;border:0;color:#086c81;text-decoration:underline;font-size:.91rem;padding:8px}
 /* Pantallas de acceso y flujo único de paciente */
 [hidden]{display:none!important}
-body[data-screen="welcome"] header nav,body[data-screen="options"] header nav,body[data-screen="voice"] header nav,body[data-screen="form"] header nav,body[data-screen="doctor"] header nav{display:none!important}
+header nav{display:none!important}
 .entry-page{max-width:770px;margin:34px auto;padding:40px 35px;background:#fff;border:1px solid #d6e7eb;border-radius:18px;text-align:center;box-shadow:0 8px 35px #113a4a0d}
 .entry-page h1{font-size:2.15rem;color:#0c4155;margin:8px 0}
 .entry-symbol{display:grid;place-items:center;margin:auto;background:#0a7085;color:#fff;width:70px;height:70px;border-radius:20px;font-size:2.6rem}
